@@ -1,0 +1,15 @@
+* {
+  /* outline: solid 1px lime; */
+}
+
+.row {
+  display: flex;
+  justify-content: start;
+}
+
+.cell {
+  height: 200px;
+  width: 200px;
+  background-color: lightblue;
+  outline: solid 5px black;
+}
