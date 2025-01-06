@@ -15,3 +15,7 @@
   align-items: center;
   outline: solid 5px black;
 }
+
+.highlight {
+  background-color: red;
+}
