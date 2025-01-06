@@ -50,11 +50,24 @@ function updateBoard(cell) {
   const c = col(cell);
   board[r][c] = currentPlayer;
   cell.innerText = currentPlayer;
-  if (checkWin(currentPlayer))
+  if (checkWin(currentPlayer)) {
     document.getElementById(
       "status"
     ).innerText = `${currentPlayer} is the WINNER!`;
+  } else {
+    if (checkForDraw(board)) {
+      removeListeners();
+    }
+  }
   currentPlayer = nextPlayer(currentPlayer);
+}
+
+function checkForDraw(board) {
+  if (board.every((row) => row.every((cell) => cell !== "-"))) {
+    document.getElementById("status").innerText = "Tie game!";
+    return true;
+  }
+  return false;
 }
 
 function checkWin(player) {
