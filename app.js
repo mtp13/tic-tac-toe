@@ -40,10 +40,49 @@ function col(cell) {
 }
 
 function updateBoard(cell) {
-  board[row(cell)][col(cell)] = currentPlayer;
-  printBoard(board);
+  const r = row(cell);
+  const c = col(cell);
+  board[r][c] = currentPlayer;
+  // printBoard(board);
   cell.innerText = currentPlayer;
+  if (checkWin(currentPlayer))
+    document.getElementById(
+      "status"
+    ).innerText = `${currentPlayer} is the WINNER!`;
   currentPlayer = nextPlayer(currentPlayer);
+}
+
+function checkWin(player) {
+  for (let row = 0; row < 3; row++) {
+    if (
+      board[row][0] === player &&
+      board[row][1] === player &&
+      board[row][2] === player
+    )
+      return true;
+  }
+  for (let col = 0; col < 3; col++) {
+    if (
+      board[0][col] === player &&
+      board[1][col] === player &&
+      board[2][col] === player
+    )
+      return true;
+  }
+  if (
+    board[0][0] === player &&
+    board[1][1] === player &&
+    board[2][2] === player
+  )
+    return true;
+
+  if (
+    board[0][2] === player &&
+    board[1][1] === player &&
+    board[2][0] === player
+  )
+    return true;
+  return false;
 }
 
 function printBoard(board) {
