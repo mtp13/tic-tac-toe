@@ -43,7 +43,6 @@ function updateBoard(cell) {
   const r = row(cell);
   const c = col(cell);
   board[r][c] = currentPlayer;
-  // printBoard(board);
   cell.innerText = currentPlayer;
   if (checkWin(currentPlayer))
     document.getElementById(
@@ -83,17 +82,6 @@ function checkWin(player) {
   )
     return true;
   return false;
-}
-
-function printBoard(board) {
-  for (let row = 0; row < 3; row++) {
-    let line = "";
-    for (let col = 0; col < 3; col++) {
-      line += board[row][col] + " ";
-    }
-    console.log(line);
-  }
-  console.log("\n");
 }
 
 initializeGame();
