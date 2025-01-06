@@ -1,7 +1,3 @@
-* {
-  /* outline: solid 1px lime; */
-}
-
 .row {
   display: flex;
   justify-content: start;
