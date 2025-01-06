@@ -7,9 +7,27 @@ let board = [
 
 function initializeGame() {
   const cells = document.querySelectorAll(".cell");
+  document.getElementById("reset").addEventListener("click", resetGame);
   cells.forEach((cell) => {
     cell.addEventListener("click", handleCellClick);
     cell.classList.remove("highlight");
+  });
+  document.getElementById("status").innerText = `Player ${currentPlayer} turn`;
+}
+
+function resetGame() {
+  currentPlayer = "X";
+  board = [
+    ["-", "-", "-"],
+    ["-", "-", "-"],
+    ["-", "-", "-"],
+  ];
+  document.getElementById("status").innerText = `Player ${currentPlayer} turn`;
+  const cells = document.querySelectorAll(".cell");
+  cells.forEach((cell) => {
+    cell.addEventListener("click", handleCellClick);
+    cell.classList.remove("highlight");
+    cell.innerText = "";
   });
 }
 
@@ -51,19 +69,23 @@ function updateBoard(cell) {
   board[r][c] = currentPlayer;
   cell.innerText = currentPlayer;
   if (checkWin(currentPlayer)) {
+    removeListeners();
     document.getElementById(
       "status"
     ).innerText = `${currentPlayer} is the WINNER!`;
+    return;
   } else {
     if (checkForDraw(board)) {
-      removeListeners();
+      return;
     }
   }
   currentPlayer = nextPlayer(currentPlayer);
+  document.getElementById("status").innerText = `Player ${currentPlayer} turn`;
 }
 
 function checkForDraw(board) {
   if (board.every((row) => row.every((cell) => cell !== "-"))) {
+    removeListeners();
     document.getElementById("status").innerText = "Tie game!";
     return true;
   }
@@ -89,7 +111,6 @@ function checkWin(player) {
       board[2][col] === player
     ) {
       showWinningCells("col", col);
-      removeListeners();
       return true;
     }
   }
@@ -99,7 +120,6 @@ function checkWin(player) {
     board[2][2] === player
   ) {
     showWinningCells("dia", 0);
-    removeListeners();
     return true;
   }
 
@@ -109,7 +129,6 @@ function checkWin(player) {
     board[2][0] === player
   ) {
     showWinningCells("dia", 1);
-    removeListeners();
     return true;
   }
   return false;
@@ -147,11 +166,11 @@ function colToCells(col) {
 
 function diaToCells(dia) {
   if (dia === 0) {
-    cells = [0, 4, 8];
+    const cells = [0, 4, 8];
     return cells;
   }
   if (dia === 1) {
-    cells = [2, 4, 6];
+    const cells = [2, 4, 6];
     return cells;
   }
 }
