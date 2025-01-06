@@ -8,7 +8,6 @@ let board = [
 function initializeGame() {
   const cells = document.querySelectorAll(".cell");
   cells.forEach((cell) => {
-    cell.innerText = cell.dataset.index;
     cell.addEventListener("click", handleCellClick);
     cell.classList.remove("highlight");
   });
@@ -104,33 +103,22 @@ function checkWin(player) {
 }
 
 function showWinningCells(direction, index) {
+  const cells = document.querySelectorAll(".cell");
+  let cellsToHighlight;
   if (direction === "row") {
-    const cellsToHighlight = rowToCells(index);
-    const cells = document.querySelectorAll(".cell");
-    cells.forEach((cell) => {
-      if (cellsToHighlight.includes(parseInt(cell.dataset.index))) {
-        cell.classList.add("highlight");
-      }
-    });
+    cellsToHighlight = rowToCells(index);
   }
   if (direction === "col") {
-    const cellsToHighlight = colToCells(index);
-    const cells = document.querySelectorAll(".cell");
-    cells.forEach((cell) => {
-      if (cellsToHighlight.includes(parseInt(cell.dataset.index))) {
-        cell.classList.add("highlight");
-      }
-    });
+    cellsToHighlight = colToCells(index);
   }
   if (direction === "dia") {
-    const cellsToHighlight = diaToCells(index);
-    const cells = document.querySelectorAll(".cell");
-    cells.forEach((cell) => {
-      if (cellsToHighlight.includes(parseInt(cell.dataset.index))) {
-        cell.classList.add("highlight");
-      }
-    });
+    cellsToHighlight = diaToCells(index);
   }
+  cells.forEach((cell) => {
+    if (cellsToHighlight.includes(parseInt(cell.dataset.index))) {
+      cell.classList.add("highlight");
+    }
+  });
 }
 
 function rowToCells(row) {
