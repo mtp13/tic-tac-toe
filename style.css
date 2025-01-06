@@ -11,5 +11,11 @@
   height: 200px;
   width: 200px;
   background-color: lightblue;
+  color: black;
+  font-size: xxx-large;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   outline: solid 5px black;
 }
