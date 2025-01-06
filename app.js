@@ -1,3 +1,4 @@
+// @ts-nocheck
 function initializeGame() {
   const cells = document.querySelectorAll(".cell");
   console.log(cells);

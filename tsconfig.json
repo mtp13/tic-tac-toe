@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "checkJs": false,
+    "allowJs": true,
+    "noEmit": true // Ensures no .d.ts files are generated
+  },
+  "exclude": ["node_modules"]
+}
