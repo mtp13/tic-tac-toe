@@ -7,7 +7,6 @@ let board = [
 
 function initializeGame() {
   const cells = document.querySelectorAll(".cell");
-  console.log(cells);
   cells.forEach((cell) => {
     cell.innerText = cell.dataset.index;
     cell.addEventListener("click", handleCellClick);
@@ -107,7 +106,6 @@ function checkWin(player) {
 function showWinningCells(direction, index) {
   if (direction === "row") {
     const cellsToHighlight = rowToCells(index);
-    console.log(cellsToHighlight[0], cellsToHighlight[1], cellsToHighlight[2]);
     const cells = document.querySelectorAll(".cell");
     cells.forEach((cell) => {
       if (cellsToHighlight.includes(parseInt(cell.dataset.index))) {
@@ -138,25 +136,21 @@ function showWinningCells(direction, index) {
 function rowToCells(row) {
   const offset = row * 3;
   const cells = [offset, offset + 1, offset + 2];
-  console.log(cells);
   return cells;
 }
 
 function colToCells(col) {
   const cells = [col, col + 3, col + 6];
-  console.log(cells);
   return cells;
 }
 
 function diaToCells(dia) {
   if (dia === 0) {
     cells = [0, 4, 8];
-    console.log(cells);
     return cells;
   }
   if (dia === 1) {
     cells = [2, 4, 6];
-    console.log(cells);
     return cells;
   }
 }
