@@ -23,7 +23,8 @@ function initializeGame() {
 }
 
 function newGame() {
-  currentPlayer = ["X", "O"][Math.floor(Math.random() * 2)];
+  // currentPlayer = ["X", "O"][Math.floor(Math.random() * 2)];
+  currentPlayer = "X";
   board = [
     ["", "", ""],
     ["", "", ""],
@@ -37,14 +38,21 @@ function handleCellClick(event) {
   const clickedCell = event.target;
   if (!isCellAvailable(clickedCell) || gameOver) return;
   updateBoard(clickedCell);
+  if (currentPlayer === "O" && !gameOver) computerMove();
+}
+
+function computerMove() {
+  const availableCells = Array.from(cells).filter(
+    (cell) => cell.innerText === ""
+  );
+  const randomCell =
+    availableCells[Math.floor(Math.random() * availableCells.length)];
+  console.log(randomCell);
+  updateBoard(randomCell);
 }
 
 function isCellAvailable(cell) {
-  if (cell.innerText !== "") {
-    return false;
-  } else {
-    return true;
-  }
+  return cell.innerText === "";
 }
 
 function nextPlayer(player) {
@@ -68,10 +76,10 @@ function updateBoard(cell) {
     gameOver = true;
     status.innerText = `${currentPlayer} wins!`;
     return;
-  } else {
-    if (checkForDraw(board)) {
-      return;
-    }
+  }
+  if (checkForDraw(board)) {
+    gameOver = true;
+    return;
   }
   currentPlayer = nextPlayer(currentPlayer);
   status.innerText = `Player ${currentPlayer} turn`;
@@ -79,7 +87,7 @@ function updateBoard(cell) {
 
 function checkForDraw(board) {
   if (board.every((row) => row.every((cell) => cell !== ""))) {
-    document.getElementById("status").innerText = "It's a CAT game!";
+    status.innerText = "It's a CAT game!";
     return true;
   }
   return false;
@@ -127,7 +135,6 @@ function checkWin(player) {
 }
 
 function showWinningCells(direction, index) {
-  const cells = document.querySelectorAll(".cell");
   let cellsToHighlight;
   if (direction === "row") {
     cellsToHighlight = rowToCells(index);
