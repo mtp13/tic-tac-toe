@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": true, // Allow JavaScript files in the project.
     "checkJs": false, // Disable type checking for JavaScript files.
-    "target": "ES6" // Specify the target ECMAScript version (adjust as needed).
+    "noEmit": true
   },
-  "exclude": ["node_modules", "**/*.js"] // Explicitly exclude JavaScript files from type-checking.
+  "exclude": ["node_modules"] // Explicitly exclude JavaScript files from type-checking.
 }
