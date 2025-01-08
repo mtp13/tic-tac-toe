@@ -1,28 +1,30 @@
 let currentPlayer = "X";
 let board = [
-  ["-", "-", "-"],
-  ["-", "-", "-"],
-  ["-", "-", "-"],
+  ["", "", ""],
+  ["", "", ""],
+  ["", "", ""],
 ];
+const cells = document.querySelectorAll(".cell");
+const status = document.getElementById("status");
+const newGameButton = document.getElementById("new-game-button");
 
 function initializeGame() {
-  const cells = document.querySelectorAll(".cell");
-  document.getElementById("reset-button").addEventListener("click", resetGame);
+  newGameButton.addEventListener("click", newGame);
   cells.forEach((cell) => {
     cell.addEventListener("click", handleCellClick);
     cell.classList.remove("highlight");
     cell.innerText = "";
   });
-  document.getElementById("status").innerText = `Player ${currentPlayer} turn`;
+  status.innerText = `Player ${currentPlayer} starts!`;
 }
 
-function resetGame() {
+function newGame() {
   const symbols = ["X", "O"];
   currentPlayer = symbols[Math.floor(Math.random() * symbols.length)];
   board = [
-    ["-", "-", "-"],
-    ["-", "-", "-"],
-    ["-", "-", "-"],
+    ["", "", ""],
+    ["", "", ""],
+    ["", "", ""],
   ];
   initializeGame();
 }
@@ -67,7 +69,7 @@ function updateBoard(cell) {
   cell.innerText = currentPlayer;
   if (checkWin(currentPlayer)) {
     removeListeners();
-    document.getElementById("status").innerText = `${currentPlayer} wins!`;
+    status.innerText = `${currentPlayer} wins!`;
     return;
   } else {
     if (checkForDraw(board)) {
@@ -75,11 +77,11 @@ function updateBoard(cell) {
     }
   }
   currentPlayer = nextPlayer(currentPlayer);
-  document.getElementById("status").innerText = `Player ${currentPlayer} turn`;
+  status.innerText = `Player ${currentPlayer} turn`;
 }
 
 function checkForDraw(board) {
-  if (board.every((row) => row.every((cell) => cell !== "-"))) {
+  if (board.every((row) => row.every((cell) => cell !== ""))) {
     removeListeners();
     document.getElementById("status").innerText = "It's a CAT game!";
     return true;
