@@ -7,28 +7,24 @@ let board = [
 
 function initializeGame() {
   const cells = document.querySelectorAll(".cell");
-  document.getElementById("reset").addEventListener("click", resetGame);
-  cells.forEach((cell) => {
-    cell.addEventListener("click", handleCellClick);
-    cell.classList.remove("highlight");
-  });
-  document.getElementById("status").innerText = `Player ${currentPlayer} turn`;
-}
-
-function resetGame() {
-  currentPlayer = "X";
-  board = [
-    ["-", "-", "-"],
-    ["-", "-", "-"],
-    ["-", "-", "-"],
-  ];
-  document.getElementById("status").innerText = `Player ${currentPlayer} turn`;
-  const cells = document.querySelectorAll(".cell");
+  document.getElementById("reset-button").addEventListener("click", resetGame);
   cells.forEach((cell) => {
     cell.addEventListener("click", handleCellClick);
     cell.classList.remove("highlight");
     cell.innerText = "";
   });
+  document.getElementById("status").innerText = `Player ${currentPlayer} turn`;
+}
+
+function resetGame() {
+  const symbols = ["X", "O"];
+  currentPlayer = symbols[Math.floor(Math.random() * symbols.length)];
+  board = [
+    ["-", "-", "-"],
+    ["-", "-", "-"],
+    ["-", "-", "-"],
+  ];
+  initializeGame();
 }
 
 function removeListeners() {
