@@ -1,9 +1,13 @@
+// TODO: computer player
+// use event.target
+//
 let currentPlayer = "X";
 let board = [
   ["", "", ""],
   ["", "", ""],
   ["", "", ""],
 ];
+let gameOver = false;
 const cells = document.querySelectorAll(".cell");
 const status = document.getElementById("status");
 const newGameButton = document.getElementById("new-game-button");
@@ -19,34 +23,27 @@ function initializeGame() {
 }
 
 function newGame() {
-  const symbols = ["X", "O"];
-  currentPlayer = symbols[Math.floor(Math.random() * symbols.length)];
+  currentPlayer = ["X", "O"][Math.floor(Math.random() * 2)];
   board = [
     ["", "", ""],
     ["", "", ""],
     ["", "", ""],
   ];
+  gameOver = false;
   initializeGame();
 }
 
-function removeListeners() {
-  const cells = document.querySelectorAll(".cell");
-  cells.forEach((cell) => {
-    cell.removeEventListener("click", handleCellClick);
-  });
-}
-
-function handleCellClick() {
-  const clickedCell = this;
-  if (isPlayed(clickedCell)) return;
+function handleCellClick(event) {
+  const clickedCell = event.target;
+  if (!isCellAvailable(clickedCell) || gameOver) return;
   updateBoard(clickedCell);
 }
 
-function isPlayed(cell) {
-  if (cell.innerText === "X" || cell.innerText === "O") {
-    return true;
-  } else {
+function isCellAvailable(cell) {
+  if (cell.innerText !== "") {
     return false;
+  } else {
+    return true;
   }
 }
 
@@ -68,7 +65,7 @@ function updateBoard(cell) {
   board[r][c] = currentPlayer;
   cell.innerText = currentPlayer;
   if (checkWin(currentPlayer)) {
-    removeListeners();
+    gameOver = true;
     status.innerText = `${currentPlayer} wins!`;
     return;
   } else {
@@ -82,7 +79,6 @@ function updateBoard(cell) {
 
 function checkForDraw(board) {
   if (board.every((row) => row.every((cell) => cell !== ""))) {
-    removeListeners();
     document.getElementById("status").innerText = "It's a CAT game!";
     return true;
   }
@@ -97,7 +93,6 @@ function checkWin(player) {
       board[row][2] === player
     ) {
       showWinningCells("row", row);
-      removeListeners();
       return true;
     }
   }
