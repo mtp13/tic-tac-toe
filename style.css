@@ -49,14 +49,15 @@ main {
 .cell {
   width: 100px;
   height: 100px;
-  border: 1px solid #000; /* Black border for each cell */
+  border: 3px solid var(--prussian-blue);
+  border-radius: 5px; /* Slightly rounded corners */
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
   display: flex;
   justify-content: center; /* Center content horizontally */
   align-items: center; /* Center content vertically */
-  font-size: 24px; /* Font size for X and O */
+  font-size: 36px; /* Font size for X and O */
   background-color: var(--sky-blue);
-  border: 2px solid var(--prussian-blue);
-  border-radius: 10px;
+  font-family: "Courier New", Courier, monospace;
   color: var(--prussian-blue);
 }
 
