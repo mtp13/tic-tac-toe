@@ -82,7 +82,7 @@ function updateBoard(cell) {
 function checkForDraw(board) {
   if (board.every((row) => row.every((cell) => cell !== "-"))) {
     removeListeners();
-    document.getElementById("status").innerText = "Tie game!";
+    document.getElementById("status").innerText = "It's a CAT game!";
     return true;
   }
   return false;
