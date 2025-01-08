@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "checkJs": false,
-    "allowJs": true,
-    "noEmit": true // Ensures no .d.ts files are generated
+    "allowJs": true, // Allow JavaScript files in the project.
+    "checkJs": false, // Disable type checking for JavaScript files.
+    "target": "ES6" // Specify the target ECMAScript version (adjust as needed).
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/*.js"] // Explicitly exclude JavaScript files from type-checking.
 }
