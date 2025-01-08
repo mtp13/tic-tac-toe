@@ -1,6 +1,3 @@
-// TODO: computer player
-// use event.target
-//
 let currentPlayer = "X";
 let board = [
   ["", "", ""],
@@ -8,6 +5,7 @@ let board = [
   ["", "", ""],
 ];
 let gameOver = false;
+let isPlaying = true;
 const cells = document.querySelectorAll(".cell");
 const status = document.getElementById("status");
 const newGameButton = document.getElementById("new-game-button");
@@ -23,7 +21,6 @@ function initializeGame() {
 }
 
 function newGame() {
-  // currentPlayer = ["X", "O"][Math.floor(Math.random() * 2)];
   currentPlayer = "X";
   board = [
     ["", "", ""],
@@ -47,7 +44,6 @@ function computerMove() {
   );
   const randomCell =
     availableCells[Math.floor(Math.random() * availableCells.length)];
-  console.log(randomCell);
   updateBoard(randomCell);
 }
 
@@ -100,7 +96,7 @@ function checkWin(player) {
       board[row][1] === player &&
       board[row][2] === player
     ) {
-      showWinningCells("row", row);
+      if (isPlaying) showWinningCells("row", row);
       return true;
     }
   }
@@ -110,7 +106,7 @@ function checkWin(player) {
       board[1][col] === player &&
       board[2][col] === player
     ) {
-      showWinningCells("col", col);
+      if (isPlaying) showWinningCells("col", col);
       return true;
     }
   }
@@ -119,7 +115,7 @@ function checkWin(player) {
     board[1][1] === player &&
     board[2][2] === player
   ) {
-    showWinningCells("dia", 0);
+    if (isPlaying) showWinningCells("dia", 0);
     return true;
   }
 
@@ -128,7 +124,7 @@ function checkWin(player) {
     board[1][1] === player &&
     board[2][0] === player
   ) {
-    showWinningCells("dia", 1);
+    if (isPlaying) showWinningCells("dia", 1);
     return true;
   }
   return false;
