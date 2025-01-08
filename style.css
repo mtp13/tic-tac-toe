@@ -1,21 +1,65 @@
-.row {
-  display: flex;
-  justify-content: start;
+:root {
+  --sky-blue: #8ecae6ff;
+  --blue-green: #219ebcff;
+  --prussian-blue: #023047ff;
+  --selective-yellow: #ffb703ff;
+  --ut-orange: #fb8500ff;
 }
 
-.cell {
-  height: 200px;
-  width: 200px;
-  background-color: lightblue;
-  color: black;
-  font-size: xxx-large;
-  font-weight: bold;
+body {
+  background-color: var(--blue-green);
+  font-family: sans-serif;
+}
+
+header {
+  background-color: var(--prussian-blue);
+  color: var(--sky-blue);
+  border-bottom: 4px solid var(--selective-yellow);
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  outline: solid 5px black;
+  height: 75px;
+}
+
+#status {
+  margin-left: 10px;
+  color: var(--selective-yellow);
+}
+
+button {
+  border: 2px solid var(--selective-yellow);
+  background-color: var(--prussian-blue);
+  color: var(--sky-blue);
+  margin-right: 10px;
+}
+
+/* Center the main content */
+main {
+  display: grid; /* Use grid layout */
+  grid-template-columns: repeat(3, 100px); /* 3 columns, each 100px wide */
+  grid-template-rows: repeat(3, 100px); /* 3 rows, each 100px tall */
+  grid-gap: 5px; /* Space between cells */
+  justify-content: center; /* Center grid horizontally */
+  align-items: center; /* Center grid vertically */
+  height: 100vh; /* Full viewport height */
+  margin-top: 10px;
+}
+
+/* Style each cell */
+.cell {
+  width: 100px;
+  height: 100px;
+  border: 1px solid #000; /* Black border for each cell */
+  display: flex;
+  justify-content: center; /* Center content horizontally */
+  align-items: center; /* Center content vertically */
+  font-size: 24px; /* Font size for X and O */
+  background-color: var(--sky-blue);
+  border: 2px solid var(--prussian-blue);
+  border-radius: 10px;
+  color: var(--prussian-blue);
 }
 
 .highlight {
-  background-color: red;
+  background-color: var(--selective-yellow);
 }
