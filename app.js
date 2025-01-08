@@ -39,6 +39,7 @@ function handleCellClick() {
   if (isPlayed(clickedCell)) return;
   updateBoard(clickedCell);
 }
+
 function isPlayed(cell) {
   if (cell.innerText === "X" || cell.innerText === "O") {
     return true;
@@ -66,9 +67,7 @@ function updateBoard(cell) {
   cell.innerText = currentPlayer;
   if (checkWin(currentPlayer)) {
     removeListeners();
-    document.getElementById(
-      "status"
-    ).innerText = `${currentPlayer} is the WINNER!`;
+    document.getElementById("status").innerText = `${currentPlayer} wins!`;
     return;
   } else {
     if (checkForDraw(board)) {
