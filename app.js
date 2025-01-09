@@ -1,3 +1,9 @@
+class Move {
+  constructor() {
+    this.row = -1;
+    this.col = -1;
+  }
+}
 let currentPlayer = "X";
 const defaultBoard = [
   ["", "", ""],
@@ -37,18 +43,11 @@ function handleCellClick(event) {
 }
 
 function computerMove() {
-  const availableCells = Array.from(cells).filter(
-    (cell) => cell.innerText === ""
-  );
-  const randomCell =
-    availableCells[Math.floor(Math.random() * availableCells.length)];
-  updateBoard(board, randomCell);
-}
-
-function miniMax(board, depth, isMaximizing) {
-  if (isWin(board, "X")) return 10;
-  if (isWin(board, "O")) return -10;
-  return 0;
+  console.log(board);
+  let bestMove = findBestMove(board);
+  let index = bestMove.row * 3 + bestMove.col;
+  updateBoard(board, cells[index]);
+  console.log(`Best move: Row ${bestMove.row}, Col ${bestMove.col}`);
 }
 
 function isCellAvailable(cell) {
@@ -172,4 +171,110 @@ function diaToCells(dia) {
   }
 }
 
+function isMovesLeft(board) {
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      if (board[row][col] === "") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function evaluate(board) {
+  for (let row = 0; row < 3; row++) {
+    if (board[row][0] === board[row][1] && board[row][1] === board[row][2]) {
+      if (board[row][0] === "X") {
+        return +10;
+      } else if (board[row][0] === "O") {
+        return -10;
+      }
+    }
+  }
+  for (let col = 0; col < 3; col++) {
+    if (board[0][col] === board[1][col] && board[1][col] === board[2][col]) {
+      if (board[0][col] === "X") {
+        return +10;
+      } else if (board[0][col] === "O") {
+        return -10;
+      }
+    }
+  }
+  if (board[0][0] === board[1][1] && board[1][1] === board[2][2]) {
+    if (board[0][0] === "X") {
+      return +10;
+    } else if (board[0][0] === "O") {
+      return -10;
+    }
+  }
+  if (board[0][2] === board[1][1] && board[1][1] === board[2][0]) {
+    if (board[0][2] === "X") {
+      return +10;
+    } else if (board[0][2] === "O") {
+      return -10;
+    }
+  }
+  return 0;
+}
+
+function minimax(board, depth, isMax) {
+  let score = evaluate(board);
+  if (score === 10) {
+    return score - depth;
+  }
+  if (score === -10) {
+    return score + depth;
+  }
+  if (isMovesLeft(board) === false) {
+    return 0;
+  }
+  if (isMax) {
+    let best = -1000;
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (board[row][col] === "") {
+          board[row][col] = "X";
+          best = Math.max(best, minimax(board, depth + 1, false));
+          board[row][col] = "";
+        }
+      }
+    }
+    return best;
+  } else {
+    let best = +1000;
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (board[row][col] === "") {
+          board[row][col] = "O";
+          best = Math.min(best, minimax(board, depth + 1, true));
+          board[row][col] = "";
+        }
+      }
+    }
+    return best;
+  }
+}
+
+function findBestMove(board) {
+  let bestVal = 1000;
+  let bestMove = new Move();
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      if (board[row][col] === "") {
+        board[row][col] = "O";
+        let moveVal = minimax(board, 0, true);
+        board[row][col] = "";
+        if (moveVal < bestVal) {
+          bestMove.row = row;
+          bestMove.col = col;
+          bestVal = moveVal;
+        }
+      }
+    }
+  }
+  console.log(`The value of the best move is: ${bestVal}`);
+  // console.log(`The optimal move is ROW: ${bestMove.row} COL: ${bestMove.col}`);
+  return bestMove;
+}
 initializeGame();
