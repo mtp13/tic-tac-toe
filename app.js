@@ -68,28 +68,28 @@ function updateBoard(cell) {
   const c = col(cell);
   board[r][c] = currentPlayer;
   cell.innerText = currentPlayer;
-  if (checkWin(currentPlayer)) {
+  if (isWin(board, currentPlayer)) {
     gameOver = true;
     status.innerText = `${currentPlayer} wins!`;
     return;
   }
-  if (checkForDraw(board)) {
+  if (isDraw(board)) {
     gameOver = true;
+    status.innerText = "It's a CAT game!";
     return;
   }
   currentPlayer = nextPlayer(currentPlayer);
   status.innerText = `Player ${currentPlayer} turn`;
 }
 
-function checkForDraw(board) {
+function isDraw(board) {
   if (board.every((row) => row.every((cell) => cell !== ""))) {
-    status.innerText = "It's a CAT game!";
     return true;
   }
   return false;
 }
 
-function checkWin(player) {
+function isWin(board, player) {
   for (let row = 0; row < 3; row++) {
     if (
       board[row][0] === player &&
@@ -131,6 +131,7 @@ function checkWin(player) {
 }
 
 function showWinningCells(direction, index) {
+  if (!isPlaying) return;
   let cellsToHighlight;
   if (direction === "row") {
     cellsToHighlight = rowToCells(index);
