@@ -17,6 +17,7 @@ let gameOver = false;
 const cells = document.querySelectorAll(".cell");
 const status = document.getElementById("status");
 const newGameButton = document.getElementById("new-game-button");
+const strengthOfComputer = 0.8;
 
 function initializeGame() {
   newGameButton.addEventListener("click", newGame);
@@ -43,13 +44,13 @@ function handleCellClick(event) {
 }
 
 function computerMove() {
-  let nextMove;
-  if (Math.random() < 0.8) {
-    nextMove = findBestMove(board);
+  let computerMove;
+  if (Math.random() < strengthOfComputer) {
+    computerMove = findBestMove(board);
   } else {
-    nextMove = findRandomMove(board);
+    computerMove = findRandomMove(board);
   }
-  let index = nextMove.row * 3 + nextMove.col;
+  let index = computerMove.row * 3 + computerMove.col;
   updateBoard(board, cells[index]);
 }
 
