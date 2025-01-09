@@ -1,9 +1,11 @@
 let currentPlayer = "X";
-let board = [
+const defaultBoard = [
   ["", "", ""],
   ["", "", ""],
   ["", "", ""],
 ];
+
+let board = defaultBoard.map((row) => [...row]);
 let gameOver = false;
 let isPlaying = true;
 const cells = document.querySelectorAll(".cell");
@@ -22,11 +24,7 @@ function initializeGame() {
 
 function newGame() {
   currentPlayer = "X";
-  board = [
-    ["", "", ""],
-    ["", "", ""],
-    ["", "", ""],
-  ];
+  board = defaultBoard.map((row) => [...row]);
   gameOver = false;
   initializeGame();
 }
@@ -34,7 +32,7 @@ function newGame() {
 function handleCellClick(event) {
   const clickedCell = event.target;
   if (!isCellAvailable(clickedCell) || gameOver) return;
-  updateBoard(clickedCell);
+  updateBoard(board, clickedCell);
   if (currentPlayer === "O" && !gameOver) computerMove();
 }
 
@@ -44,7 +42,7 @@ function computerMove() {
   );
   const randomCell =
     availableCells[Math.floor(Math.random() * availableCells.length)];
-  updateBoard(randomCell);
+  updateBoard(board, randomCell);
 }
 
 function isCellAvailable(cell) {
@@ -63,7 +61,7 @@ function col(cell) {
   return cell.dataset.index - row(cell) * 3;
 }
 
-function updateBoard(cell) {
+function updateBoard(board, cell) {
   const r = row(cell);
   const c = col(cell);
   board[r][c] = currentPlayer;
@@ -83,10 +81,7 @@ function updateBoard(cell) {
 }
 
 function isDraw(board) {
-  if (board.every((row) => row.every((cell) => cell !== ""))) {
-    return true;
-  }
-  return false;
+  return board.flat().every((cell) => cell !== "");
 }
 
 function isWin(board, player) {
