@@ -43,9 +43,13 @@ function handleCellClick(event) {
 }
 
 function computerMove() {
-  let bestMove = findBestMove(board);
-  console.log(`Best move: Row ${bestMove.row}, Col ${bestMove.col}`);
-  let index = bestMove.row * 3 + bestMove.col;
+  let nextMove;
+  if (Math.random() < 0.8) {
+    nextMove = findBestMove(board);
+  } else {
+    nextMove = findRandomMove(board);
+  }
+  let index = nextMove.row * 3 + nextMove.col;
   updateBoard(board, cells[index]);
 }
 
@@ -243,6 +247,22 @@ function minimax(board, depth, isMax) {
   }
 }
 
+function findRandomMove(board) {
+  let randomMove = new Move();
+  const availableCells = Array.from(cells).filter(
+    (cell) => cell.innerText === ""
+  );
+  const index =
+    availableCells[Math.floor(Math.random() * availableCells.length)].dataset
+      .index;
+  const row = Math.floor(index / 3);
+  const col = index - row * 3;
+  randomMove.row = row;
+  randomMove.col = col;
+  console.log(`Random move: Row ${randomMove.row}, Col ${randomMove.col}`);
+  return randomMove;
+}
+
 function findBestMove(board) {
   let bestVal = 1000;
   let bestMove = new Move();
@@ -262,6 +282,7 @@ function findBestMove(board) {
   }
 
   console.log(`The value of the best move is: ${bestVal}`);
+  console.log(`Best move: Row ${bestMove.row}, Col ${bestMove.col}`);
   return bestMove;
 }
 
