@@ -4,6 +4,7 @@ class Move {
     this.col = -1;
   }
 }
+
 let currentPlayer = "X";
 const defaultBoard = [
   ["", "", ""],
@@ -13,7 +14,6 @@ const defaultBoard = [
 
 let board = defaultBoard.map((row) => [...row]);
 let gameOver = false;
-let isPlaying = true;
 const cells = document.querySelectorAll(".cell");
 const status = document.getElementById("status");
 const newGameButton = document.getElementById("new-game-button");
@@ -43,11 +43,10 @@ function handleCellClick(event) {
 }
 
 function computerMove() {
-  console.log(board);
   let bestMove = findBestMove(board);
+  console.log(`Best move: Row ${bestMove.row}, Col ${bestMove.col}`);
   let index = bestMove.row * 3 + bestMove.col;
   updateBoard(board, cells[index]);
-  console.log(`Best move: Row ${bestMove.row}, Col ${bestMove.col}`);
 }
 
 function isCellAvailable(cell) {
@@ -96,7 +95,7 @@ function isWin(board, player) {
       board[row][1] === player &&
       board[row][2] === player
     ) {
-      if (isPlaying) showWinningCells("row", row);
+      showWinningCells("row", row);
       return true;
     }
   }
@@ -106,7 +105,7 @@ function isWin(board, player) {
       board[1][col] === player &&
       board[2][col] === player
     ) {
-      if (isPlaying) showWinningCells("col", col);
+      showWinningCells("col", col);
       return true;
     }
   }
@@ -115,7 +114,7 @@ function isWin(board, player) {
     board[1][1] === player &&
     board[2][2] === player
   ) {
-    if (isPlaying) showWinningCells("dia", 0);
+    showWinningCells("dia", 0);
     return true;
   }
 
@@ -124,14 +123,13 @@ function isWin(board, player) {
     board[1][1] === player &&
     board[2][0] === player
   ) {
-    if (isPlaying) showWinningCells("dia", 1);
+    showWinningCells("dia", 1);
     return true;
   }
   return false;
 }
 
 function showWinningCells(direction, index) {
-  if (!isPlaying) return;
   let cellsToHighlight;
   if (direction === "row") {
     cellsToHighlight = rowToCells(index);
@@ -169,17 +167,6 @@ function diaToCells(dia) {
     const cells = [2, 4, 6];
     return cells;
   }
-}
-
-function isMovesLeft(board) {
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 3; col++) {
-      if (board[row][col] === "") {
-        return true;
-      }
-    }
-  }
-  return false;
 }
 
 function evaluate(board) {
@@ -226,7 +213,7 @@ function minimax(board, depth, isMax) {
   if (score === -10) {
     return score + depth;
   }
-  if (isMovesLeft(board) === false) {
+  if (isDraw(board)) {
     return 0;
   }
   if (isMax) {
@@ -273,8 +260,9 @@ function findBestMove(board) {
       }
     }
   }
+
   console.log(`The value of the best move is: ${bestVal}`);
-  // console.log(`The optimal move is ROW: ${bestMove.row} COL: ${bestMove.col}`);
   return bestMove;
 }
+
 initializeGame();
