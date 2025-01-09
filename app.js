@@ -45,6 +45,12 @@ function computerMove() {
   updateBoard(board, randomCell);
 }
 
+function miniMax(board, depth, isMaximizing) {
+  if (isWin(board, "X")) return 10;
+  if (isWin(board, "O")) return -10;
+  return 0;
+}
+
 function isCellAvailable(cell) {
   return cell.innerText === "";
 }
