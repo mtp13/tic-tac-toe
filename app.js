@@ -44,14 +44,16 @@ function handleCellClick(event) {
 }
 
 function computerMove() {
-  let computerMove;
-  if (Math.random() < strengthOfComputer) {
-    computerMove = findBestMove(board);
-  } else {
-    computerMove = findRandomMove(board);
-  }
-  let index = computerMove.row * 3 + computerMove.col;
-  updateBoard(board, cells[index]);
+  setTimeout(() => {
+    let computerMove;
+    if (Math.random() < strengthOfComputer) {
+      computerMove = findBestMove(board);
+    } else {
+      computerMove = findRandomMove(board);
+    }
+    let index = computerMove.row * 3 + computerMove.col;
+    updateBoard(board, cells[index]);
+  }, 500);
 }
 
 function isCellAvailable(cell) {
