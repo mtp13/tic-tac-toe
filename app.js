@@ -19,6 +19,20 @@ const status = document.getElementById("status");
 const newGameButton = document.getElementById("new-game-button");
 const strengthOfComputer = 0.8;
 
+// Add event listeners to all radio buttons in the group
+const gameModeButtons = document.querySelectorAll('input[name="gameMode"]');
+let gameMode = "onePlayer";
+gameModeButtons.forEach((button) => {
+  button.addEventListener("change", () => {
+    const selectedGameMode = document.querySelector(
+      'input[name="gameMode"]:checked'
+    ).value;
+    gameMode = selectedGameMode;
+    console.log(`Game mode changed to: ${selectedGameMode}`);
+    // You can now use the selectedGameMode variable to update your game logic
+  });
+});
+
 function initializeGame() {
   newGameButton.addEventListener("click", newGame);
   cells.forEach((cell) => {
@@ -40,7 +54,9 @@ function handleCellClick(event) {
   const clickedCell = event.target;
   if (!isCellAvailable(clickedCell) || gameOver) return;
   updateBoard(board, clickedCell);
-  if (currentPlayer === "O" && !gameOver) computerMove();
+  if (gameMode === "onePlayer") {
+    if (currentPlayer === "O" && !gameOver) computerMove();
+  }
 }
 
 function computerMove() {

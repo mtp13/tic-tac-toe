@@ -12,7 +12,6 @@
   <body>
     <header>
       <p id="status"></p>
-      <button id="new-game-button">New Game</button>
     </header>
     <main>
       <div class="cell" data-index="0"></div>
@@ -25,6 +24,18 @@
       <div class="cell" data-index="7"></div>
       <div class="cell" data-index="8"></div>
     </main>
+    <footer>
+      <button id="new-game-button">New Game</button>
+      <form>
+        <label for="">
+          <input type="radio" name="gameMode" value="onePlayer" checked />One
+          Player
+        </label>
+        <label for="">
+          <input type="radio" name="gameMode" value="twoPlayer" />Two Player
+        </label>
+      </form>
+    </footer>
     <script src="app.js"></script>
   </body>
 </html>
