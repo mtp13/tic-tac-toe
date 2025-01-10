@@ -90,8 +90,11 @@ function computerMove() {
     }
     let index = computerMove.row * 3 + computerMove.col;
     const cell = cells[index];
-    cell.classList.add("computer-move");
     updateBoard(board, cell);
+    cell.classList.add("bounce");
+    setTimeout(() => {
+      cell.classList.remove("bounce");
+    }, 500);
   }, 500);
 }
 
