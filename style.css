@@ -55,8 +55,21 @@ main {
   color: var(--prussian-blue);
 }
 
+@keyframes glow {
+  0% {
+    background-color: var(--sky-blue);
+  }
+  50% {
+    background-color: var(--selective-yellow);
+  }
+  100% {
+    background-color: var(--sky-blue);
+  }
+}
+
 .highlight {
-  background-color: var(--selective-yellow);
+  border: 3px solid var(--selective-yellow);
+  box-shadow: 0 0 10px var(--selective-yellow);
 }
 
 footer {

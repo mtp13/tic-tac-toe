@@ -5,7 +5,9 @@ class Move {
   }
 }
 
-let currentPlayer = "X";
+const PLAYER_X = "X";
+const PLAYER_O = "O";
+let currentPlayer = PLAYER_X;
 const defaultBoard = [
   ["", "", ""],
   ["", "", ""],
@@ -33,7 +35,7 @@ function initializeGame() {
 }
 
 function newGame() {
-  currentPlayer = "X";
+  currentPlayer = PLAYER_X;
   board = defaultBoard.map((row) => [...row]);
   gameOver = false;
   initializeGame();
@@ -45,7 +47,7 @@ function handleCellClick(event) {
   disableGameModeSelection();
   updateBoard(board, clickedCell);
   if (gameMode === "onePlayer") {
-    if (currentPlayer === "O" && !gameOver) computerMove();
+    if (currentPlayer === PLAYER_O && !gameOver) computerMove();
   }
 }
 function initializeGameModeButtons() {
@@ -87,7 +89,9 @@ function computerMove() {
       computerMove = findRandomMove(board);
     }
     let index = computerMove.row * 3 + computerMove.col;
-    updateBoard(board, cells[index]);
+    const cell = cells[index];
+    cell.classList.add("computer-move");
+    updateBoard(board, cell);
   }, 500);
 }
 
@@ -96,7 +100,7 @@ function isCellAvailable(cell) {
 }
 
 function nextPlayer(player) {
-  return player === "X" ? "O" : "X";
+  return player === PLAYER_X ? PLAYER_O : PLAYER_X;
 }
 
 function row(cell) {
@@ -214,33 +218,33 @@ function diaToCells(dia) {
 function evaluate(board) {
   for (let row = 0; row < 3; row++) {
     if (board[row][0] === board[row][1] && board[row][1] === board[row][2]) {
-      if (board[row][0] === "X") {
+      if (board[row][0] === PLAYER_X) {
         return +10;
-      } else if (board[row][0] === "O") {
+      } else if (board[row][0] === PLAYER_O) {
         return -10;
       }
     }
   }
   for (let col = 0; col < 3; col++) {
     if (board[0][col] === board[1][col] && board[1][col] === board[2][col]) {
-      if (board[0][col] === "X") {
+      if (board[0][col] === PLAYER_X) {
         return +10;
-      } else if (board[0][col] === "O") {
+      } else if (board[0][col] === PLAYER_O) {
         return -10;
       }
     }
   }
   if (board[0][0] === board[1][1] && board[1][1] === board[2][2]) {
-    if (board[0][0] === "X") {
+    if (board[0][0] === PLAYER_X) {
       return +10;
-    } else if (board[0][0] === "O") {
+    } else if (board[0][0] === PLAYER_O) {
       return -10;
     }
   }
   if (board[0][2] === board[1][1] && board[1][1] === board[2][0]) {
-    if (board[0][2] === "X") {
+    if (board[0][2] === PLAYER_X) {
       return +10;
-    } else if (board[0][2] === "O") {
+    } else if (board[0][2] === PLAYER_O) {
       return -10;
     }
   }
@@ -263,7 +267,7 @@ function minimax(board, depth, isMax) {
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         if (board[row][col] === "") {
-          board[row][col] = "X";
+          board[row][col] = PLAYER_X;
           best = Math.max(best, minimax(board, depth + 1, false));
           board[row][col] = "";
         }
@@ -275,7 +279,7 @@ function minimax(board, depth, isMax) {
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         if (board[row][col] === "") {
-          board[row][col] = "O";
+          board[row][col] = PLAYER_O;
           best = Math.min(best, minimax(board, depth + 1, true));
           board[row][col] = "";
         }
@@ -307,7 +311,7 @@ function findBestMove(board) {
   for (let row = 0; row < 3; row++) {
     for (let col = 0; col < 3; col++) {
       if (board[row][col] === "") {
-        board[row][col] = "O";
+        board[row][col] = PLAYER_O;
         let moveVal = minimax(board, 0, true);
         board[row][col] = "";
         if (moveVal < bestVal) {
