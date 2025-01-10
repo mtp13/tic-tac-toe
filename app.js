@@ -14,24 +14,11 @@ const defaultBoard = [
 
 let board = defaultBoard.map((row) => [...row]);
 let gameOver = false;
+let gameMode = selectedGameMode();
 const cells = document.querySelectorAll(".cell");
 const status = document.getElementById("status");
 const newGameButton = document.getElementById("new-game-button");
 const strengthOfComputer = 0.8;
-
-// Add event listeners to all radio buttons in the group
-const gameModeButtons = document.querySelectorAll('input[name="gameMode"]');
-let gameMode = "onePlayer";
-gameModeButtons.forEach((button) => {
-  button.addEventListener("change", () => {
-    const selectedGameMode = document.querySelector(
-      'input[name="gameMode"]:checked'
-    ).value;
-    gameMode = selectedGameMode;
-    console.log(`Game mode changed to: ${selectedGameMode}`);
-    // You can now use the selectedGameMode variable to update your game logic
-  });
-});
 
 function initializeGame() {
   newGameButton.addEventListener("click", newGame);
@@ -47,6 +34,7 @@ function newGame() {
   currentPlayer = "X";
   board = defaultBoard.map((row) => [...row]);
   gameOver = false;
+  gameMode = selectedGameMode();
   initializeGame();
 }
 
@@ -57,6 +45,12 @@ function handleCellClick(event) {
   if (gameMode === "onePlayer") {
     if (currentPlayer === "O" && !gameOver) computerMove();
   }
+}
+
+function selectedGameMode() {
+  const selectedMode = document.querySelector('input[name="gameMode"]:checked');
+  console.log(`Game mode changed to: ${selectedMode.value}`);
+  return selectedMode ? selectedMode.value : null;
 }
 
 function computerMove() {
