@@ -31,7 +31,11 @@ function initializeGame() {
     cell.classList.remove("highlight");
     cell.innerText = "";
   });
-  status.innerText = `Player ${currentPlayer} starts!`;
+  updateStatus(`Player ${currentPlayer} starts!`);
+}
+
+function updateStatus(message) {
+  status.innerText = message;
 }
 
 function newGame() {
@@ -121,16 +125,16 @@ function updateBoard(board, cell) {
   cell.innerText = currentPlayer;
   if (isWin(board, currentPlayer)) {
     gameOver = true;
-    status.innerText = `${currentPlayer} wins!`;
+    updateStatus(`${currentPlayer} wins!`);
     return;
   }
   if (isDraw(board)) {
     gameOver = true;
-    status.innerText = "It's a CAT game!";
+    updateStatus("It's a CAT game!");
     return;
   }
   currentPlayer = nextPlayer(currentPlayer);
-  status.innerText = `Player ${currentPlayer} turn`;
+  updateStatus(`Player ${currentPlayer} turn`);
 }
 
 function isDraw(board) {
