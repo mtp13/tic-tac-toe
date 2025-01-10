@@ -18,7 +18,6 @@ let board = defaultBoard.map((row) => [...row]);
 let gameOver = false;
 let gameMode = selectedGameMode();
 const cells = document.querySelectorAll(".cell");
-const status = document.getElementById("status");
 const newGameButton = document.getElementById("new-game-button");
 const strengthOfComputer = 0.8;
 
@@ -31,11 +30,17 @@ function initializeGame() {
     cell.classList.remove("highlight");
     cell.innerText = "";
   });
-  updateStatus(`Player ${currentPlayer} starts!`);
+  updateStatus(`Player ${currentPlayer} starts!`, true);
 }
 
-function updateStatus(message) {
+function updateStatus(message, animate) {
+  const status = document.getElementById("status");
+  if (animate) status.classList.add("scale-up");
   status.innerText = message;
+  if (animate)
+    setTimeout(() => {
+      status.classList.remove("scale-up");
+    }, 1000); // Scale lasts for 1 second
 }
 
 function newGame() {
@@ -54,6 +59,7 @@ function handleCellClick(event) {
     if (currentPlayer === PLAYER_O && !gameOver) computerMove();
   }
 }
+
 function initializeGameModeButtons() {
   const gameModeButtons = document.querySelectorAll('input[name="gameMode"]');
 
@@ -80,11 +86,17 @@ function enableGameModeSelection() {
 
 function selectedGameMode() {
   const selectedMode = document.querySelector('input[name="gameMode"]:checked');
-  console.log(`Game mode changed to: ${selectedMode.value}`);
+  const message =
+    selectedMode.value === "onePlayer"
+      ? "One Player Game Mode"
+      : "Two Player Game Mode";
+  updateStatus(message);
+
   return selectedMode ? selectedMode.value : null;
 }
 
 function computerMove() {
+  updateStatus("Good luck!");
   setTimeout(() => {
     let computerMove;
     if (Math.random() < strengthOfComputer) {
@@ -125,16 +137,18 @@ function updateBoard(board, cell) {
   cell.innerText = currentPlayer;
   if (isWin(board, currentPlayer)) {
     gameOver = true;
-    updateStatus(`${currentPlayer} wins!`);
+    updateStatus(`${currentPlayer} wins!`, true);
     return;
   }
   if (isDraw(board)) {
     gameOver = true;
-    updateStatus("It's a CAT game!");
+    updateStatus("It's a CAT game!", true);
     return;
   }
   currentPlayer = nextPlayer(currentPlayer);
-  updateStatus(`Player ${currentPlayer} turn`);
+  if (gameMode !== "onePlayer") {
+    updateStatus(`Player ${currentPlayer} turn`);
+  }
 }
 
 function isDraw(board) {
@@ -308,7 +322,6 @@ function findRandomMove(board) {
   const col = index - row * 3;
   randomMove.row = row;
   randomMove.col = col;
-  console.log(`Random move: Row ${randomMove.row}, Col ${randomMove.col}`);
   return randomMove;
 }
 
@@ -329,9 +342,6 @@ function findBestMove(board) {
       }
     }
   }
-
-  console.log(`The value of the best move is: ${bestVal}`);
-  console.log(`Best move: Row ${bestMove.row}, Col ${bestMove.col}`);
   return bestMove;
 }
 

@@ -27,6 +27,22 @@ header {
   font-size: 24px;
 }
 
+@keyframes scaleUp {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.scale-up {
+  animation: scaleUp 1s ease-out;
+}
+
 /* Center the main content */
 main {
   display: grid; /* Use grid layout */
