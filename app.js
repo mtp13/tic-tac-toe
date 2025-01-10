@@ -91,7 +91,6 @@ function selectedGameMode() {
       ? "One Player Game Mode"
       : "Two Player Game Mode";
   updateStatus(message);
-
   return selectedMode ? selectedMode.value : null;
 }
 

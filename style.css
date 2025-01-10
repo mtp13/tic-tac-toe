@@ -101,6 +101,7 @@ footer {
 
 button {
   border: 2px solid var(--selective-yellow);
+  border-radius: 10px;
   background-color: var(--prussian-blue);
   color: var(--sky-blue);
   padding: 10px 20px;
