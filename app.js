@@ -21,6 +21,8 @@ const newGameButton = document.getElementById("new-game-button");
 const strengthOfComputer = 0.8;
 
 function initializeGame() {
+  initializeGameModeButtons();
+  enableGameModeSelection();
   newGameButton.addEventListener("click", newGame);
   cells.forEach((cell) => {
     cell.addEventListener("click", handleCellClick);
@@ -34,17 +36,40 @@ function newGame() {
   currentPlayer = "X";
   board = defaultBoard.map((row) => [...row]);
   gameOver = false;
-  gameMode = selectedGameMode();
   initializeGame();
 }
 
 function handleCellClick(event) {
   const clickedCell = event.target;
   if (!isCellAvailable(clickedCell) || gameOver) return;
+  disableGameModeSelection();
   updateBoard(board, clickedCell);
   if (gameMode === "onePlayer") {
     if (currentPlayer === "O" && !gameOver) computerMove();
   }
+}
+function initializeGameModeButtons() {
+  const gameModeButtons = document.querySelectorAll('input[name="gameMode"]');
+
+  gameModeButtons.forEach((button) => {
+    button.addEventListener("change", () => {
+      gameMode = selectedGameMode();
+    });
+  });
+}
+
+function disableGameModeSelection() {
+  const gameModeButtons = document.querySelectorAll('input[name="gameMode"]');
+  gameModeButtons.forEach((button) => {
+    button.disabled = true;
+  });
+}
+
+function enableGameModeSelection() {
+  const gameModeButtons = document.querySelectorAll('input[name="gameMode"]');
+  gameModeButtons.forEach((button) => {
+    button.disabled = false;
+  });
 }
 
 function selectedGameMode() {
