@@ -1,347 +1,713 @@
-class Move {
-  constructor() {
-    this.row = -1;
-    this.col = -1;
+const PLAYER_X = "X";
+const PLAYER_O = "O";
+
+const DIFFICULTY_STRENGTH = {
+  easy: 0.4,
+  medium: 0.8,
+  hard: 1.0,
+};
+
+const WIN_LINES = [
+  { indices: [0, 1, 2], type: "row", index: 0 },
+  { indices: [3, 4, 5], type: "row", index: 1 },
+  { indices: [6, 7, 8], type: "row", index: 2 },
+  { indices: [0, 3, 6], type: "col", index: 0 },
+  { indices: [1, 4, 7], type: "col", index: 1 },
+  { indices: [2, 5, 8], type: "col", index: 2 },
+  { indices: [0, 4, 8], type: "dia", index: 0 },
+  { indices: [2, 4, 6], type: "dia", index: 1 },
+];
+
+const STORAGE_KEY = "ttt_modern_state_v1";
+
+// Game State
+let board = Array(9).fill("");
+let currentPlayer = PLAYER_X;
+let startingPlayer = PLAYER_X;
+let gameOver = false;
+let isComputerThinking = false;
+let computerTimeoutId = null;
+let gameMode = "onePlayer";
+let difficulty = "medium";
+let soundEnabled = true;
+let scores = { X: 0, O: 0, ties: 0 };
+
+// DOM Elements
+const boardEl = document.getElementById("board");
+const cells = Array.from(document.querySelectorAll(".cell"));
+const statusBanner = document.querySelector(".status-banner");
+const statusText = document.getElementById("status");
+const statusDot = document.getElementById("status-dot");
+const newGameButton = document.getElementById("new-game-button");
+const resetScoresButton = document.getElementById("reset-scores-button");
+const soundToggleBtn = document.getElementById("sound-toggle");
+const themeCheckbox = document.getElementById("theme-checkbox");
+const winLineSvg = document.getElementById("win-line-svg");
+const winLine = document.getElementById("win-line");
+
+const scoreXEl = document.getElementById("score-x");
+const scoreOEl = document.getElementById("score-o");
+const scoreTiesEl = document.getElementById("score-ties");
+const scoreCardX = document.getElementById("score-card-x");
+const scoreCardO = document.getElementById("score-card-o");
+const scoreCardTies = document.getElementById("score-card-ties");
+const labelPlayerX = document.getElementById("label-player-x");
+const labelPlayerO = document.getElementById("label-player-o");
+
+// Web Audio Synthesizer for tactile, zero-dependency sound effects
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!soundEnabled) return null;
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
+
+function playTone(freq, duration = 0.09, type = "sine", delay = 0, gainPeak = 0.12) {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const startTime = ctx.currentTime + delay;
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    gain.gain.setValueAtTime(0.001, startTime);
+    gain.gain.exponentialRampToValueAtTime(gainPeak, startTime + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+  } catch {
+    // Ignore audio errors on restricted devices
   }
 }
 
-const PLAYER_X = "X";
-const PLAYER_O = "O";
-let currentPlayer = PLAYER_X;
-const defaultBoard = [
-  ["", "", ""],
-  ["", "", ""],
-  ["", "", ""],
-];
-
-let board = defaultBoard.map((row) => [...row]);
-let gameOver = false;
-let gameMode = selectedGameMode();
-const cells = document.querySelectorAll(".cell");
-const newGameButton = document.getElementById("new-game-button");
-const strengthOfComputer = 0.8;
-
-function initializeGame() {
-  initializeGameModeButtons();
-  enableGameModeSelection();
-  newGameButton.addEventListener("click", newGame);
-  cells.forEach((cell) => {
-    cell.addEventListener("click", handleCellClick);
-    cell.classList.remove("highlight");
-    cell.innerText = "";
-  });
-  updateStatus(`Player ${currentPlayer} starts!`, true);
+function playSound(effect) {
+  if (!soundEnabled) return;
+  switch (effect) {
+    case "moveX":
+      playTone(520, 0.08, "triangle", 0, 0.13);
+      break;
+    case "moveO":
+      playTone(390, 0.09, "sine", 0, 0.13);
+      break;
+    case "win":
+      playTone(523.25, 0.12, "triangle", 0, 0.14); // C5
+      playTone(659.25, 0.12, "triangle", 0.09, 0.14); // E5
+      playTone(783.99, 0.14, "triangle", 0.18, 0.14); // G5
+      playTone(1046.5, 0.28, "triangle", 0.27, 0.16); // C6
+      break;
+    case "draw":
+      playTone(349.23, 0.14, "sine", 0, 0.1);
+      playTone(311.13, 0.22, "sine", 0.12, 0.1);
+      break;
+    case "reset":
+      playTone(440, 0.06, "sine", 0, 0.08);
+      break;
+  }
 }
 
-function updateStatus(message, animate) {
-  const status = document.getElementById("status");
-  if (animate) status.classList.add("scale-up");
-  status.innerText = message;
-  if (animate)
+// Persistence
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      // Default to light theme if system prefers light
+      if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+        themeCheckbox.checked = true;
+      }
+      return;
+    }
+    const saved = JSON.parse(raw);
+    if (saved.scores) {
+      scores.X = Number(saved.scores.X) || 0;
+      scores.O = Number(saved.scores.O) || 0;
+      scores.ties = Number(saved.scores.ties) || 0;
+    }
+    if (typeof saved.soundEnabled === "boolean") {
+      soundEnabled = saved.soundEnabled;
+    }
+    if (typeof saved.lightTheme === "boolean") {
+      themeCheckbox.checked = saved.lightTheme;
+    }
+    if (saved.gameMode === "onePlayer" || saved.gameMode === "twoPlayer") {
+      gameMode = saved.gameMode;
+      const radio = document.querySelector(`input[name="gameMode"][value="${gameMode}"]`);
+      if (radio) radio.checked = true;
+    }
+    if (saved.difficulty && DIFFICULTY_STRENGTH[saved.difficulty] !== undefined) {
+      difficulty = saved.difficulty;
+      const diffRadio = document.querySelector(`input[name="difficulty"][value="${difficulty}"]`);
+      if (diffRadio) diffRadio.checked = true;
+    }
+  } catch {
+    // Ignore storage errors in private browsing
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        scores,
+        soundEnabled,
+        lightTheme: themeCheckbox.checked,
+        gameMode,
+        difficulty,
+      })
+    );
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// SVG Mark Factory
+function createMarkSVG(player) {
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("aria-hidden", "true");
+  svg.classList.add("mark-svg", player === PLAYER_X ? "mark-x" : "mark-o");
+
+  if (player === PLAYER_X) {
+    const line1 = document.createElementNS(svgNS, "line");
+    line1.setAttribute("x1", "22");
+    line1.setAttribute("y1", "22");
+    line1.setAttribute("x2", "78");
+    line1.setAttribute("y2", "78");
+    line1.setAttribute("stroke", "currentColor");
+    line1.setAttribute("stroke-width", "14");
+    line1.setAttribute("stroke-linecap", "round");
+
+    const line2 = document.createElementNS(svgNS, "line");
+    line2.setAttribute("x1", "78");
+    line2.setAttribute("y1", "22");
+    line2.setAttribute("x2", "22");
+    line2.setAttribute("y2", "78");
+    line2.setAttribute("stroke", "currentColor");
+    line2.setAttribute("stroke-width", "14");
+    line2.setAttribute("stroke-linecap", "round");
+
+    svg.append(line1, line2);
+  } else {
+    const circle = document.createElementNS(svgNS, "circle");
+    circle.setAttribute("cx", "50");
+    circle.setAttribute("cy", "50");
+    circle.setAttribute("r", "30");
+    circle.setAttribute("fill", "none");
+    circle.setAttribute("stroke", "currentColor");
+    circle.setAttribute("stroke-width", "14");
+    circle.setAttribute("stroke-linecap", "round");
+    svg.appendChild(circle);
+  }
+
+  return svg;
+}
+
+function getCellAriaLabel(index, mark) {
+  const r = Math.floor(index / 3) + 1;
+  const c = (index % 3) + 1;
+  const state = mark ? `marked ${mark}` : "empty";
+  return `Row ${r}, Column ${c}, ${state}`;
+}
+
+function updateScoreboardUI(bumpKey = null) {
+  scoreXEl.textContent = String(scores.X);
+  scoreOEl.textContent = String(scores.O);
+  scoreTiesEl.textContent = String(scores.ties);
+
+  if (gameMode === "onePlayer") {
+    labelPlayerX.textContent = "You";
+    labelPlayerO.textContent = "AI";
+  } else {
+    labelPlayerX.textContent = "Player X";
+    labelPlayerO.textContent = "Player O";
+  }
+
+  scoreCardX.classList.toggle("active-turn", !gameOver && currentPlayer === PLAYER_X);
+  scoreCardO.classList.toggle("active-turn", !gameOver && currentPlayer === PLAYER_O);
+
+  if (bumpKey) {
+    const targetCard =
+      bumpKey === PLAYER_X
+        ? scoreCardX
+        : bumpKey === PLAYER_O
+          ? scoreCardO
+          : scoreCardTies;
+    targetCard.classList.remove("score-bump");
+    void targetCard.offsetWidth;
+    targetCard.classList.add("score-bump");
+    setTimeout(() => targetCard.classList.remove("score-bump"), 450);
+  }
+}
+
+function updateStatus(message, { animate = false, state = "turn", dotPlayer = currentPlayer } = {}) {
+  statusText.textContent = message;
+  statusBanner.dataset.state = state;
+  statusDot.dataset.player = dotPlayer;
+
+  if (animate) {
+    statusBanner.classList.remove("scale-up");
+    void statusBanner.offsetWidth;
+    statusBanner.classList.add("scale-up");
     setTimeout(() => {
-      status.classList.remove("scale-up");
-    }, 1000); // Scale lasts for 1 second
+      statusBanner.classList.remove("scale-up");
+    }, 500);
+  }
 }
 
-function newGame() {
-  currentPlayer = PLAYER_X;
-  board = defaultBoard.map((row) => [...row]);
+function syncBoardAttributes() {
+  boardEl.dataset.turn = currentPlayer;
+  boardEl.dataset.gameOver = String(gameOver);
+}
+
+function resetWinLine() {
+  winLineSvg.classList.remove("visible");
+  delete winLineSvg.dataset.winner;
+}
+
+function drawWinLine(winInfo, winner) {
+  const firstCell = cells[winInfo.indices[0]];
+  const lastCell = cells[winInfo.indices[2]];
+  const boardRect = boardEl.getBoundingClientRect();
+  const firstRect = firstCell.getBoundingClientRect();
+  const lastRect = lastCell.getBoundingClientRect();
+
+  if (boardRect.width === 0 || boardRect.height === 0) return;
+
+  const scaleX = 300 / boardRect.width;
+  const scaleY = 300 / boardRect.height;
+
+  const x1 = (firstRect.left - boardRect.left + firstRect.width / 2) * scaleX;
+  const y1 = (firstRect.top - boardRect.top + firstRect.height / 2) * scaleY;
+  const x2 = (lastRect.left - boardRect.left + lastRect.width / 2) * scaleX;
+  const y2 = (lastRect.top - boardRect.top + lastRect.height / 2) * scaleY;
+
+  winLine.setAttribute("x1", x1.toFixed(1));
+  winLine.setAttribute("y1", y1.toFixed(1));
+  winLine.setAttribute("x2", x2.toFixed(1));
+  winLine.setAttribute("y2", y2.toFixed(1));
+
+  winLineSvg.dataset.winner = winner;
+  winLineSvg.classList.add("visible");
+}
+
+function startNewRound({ alternateStarter = false, playResetSound = false } = {}) {
+  if (computerTimeoutId) {
+    clearTimeout(computerTimeoutId);
+    computerTimeoutId = null;
+  }
+  isComputerThinking = false;
   gameOver = false;
-  initializeGame();
+  board = Array(9).fill("");
+
+  if (alternateStarter) {
+    startingPlayer = startingPlayer === PLAYER_X ? PLAYER_O : PLAYER_X;
+  } else {
+    startingPlayer = PLAYER_X;
+  }
+  currentPlayer = startingPlayer;
+
+  delete boardEl.dataset.hasWinner;
+  resetWinLine();
+
+  cells.forEach((cell, idx) => {
+    cell.innerHTML = "";
+    cell.classList.remove("highlight");
+    delete cell.dataset.mark;
+    cell.disabled = false;
+    cell.setAttribute("aria-label", getCellAriaLabel(idx, ""));
+  });
+
+  syncBoardAttributes();
+  updateScoreboardUI();
+
+  if (playResetSound) {
+    playSound("reset");
+  }
+
+  if (gameMode === "onePlayer" && currentPlayer === PLAYER_O) {
+    updateStatus("AI starts this round...", { animate: true, dotPlayer: PLAYER_O });
+    triggerComputerMove();
+  } else {
+    const startMsg =
+      gameMode === "onePlayer"
+        ? "Your turn (X)"
+        : `Player ${currentPlayer}'s turn`;
+    updateStatus(startMsg, { animate: true, dotPlayer: currentPlayer });
+  }
 }
 
 function handleCellClick(event) {
-  const clickedCell = event.target;
-  if (!isCellAvailable(clickedCell) || gameOver) return;
-  disableGameModeSelection();
-  updateBoard(board, clickedCell);
-  if (gameMode === "onePlayer") {
-    if (currentPlayer === PLAYER_O && !gameOver) computerMove();
-  }
-}
+  const cell = event.currentTarget;
+  const index = Number(cell.dataset.index);
 
-function initializeGameModeButtons() {
-  const gameModeButtons = document.querySelectorAll('input[name="gameMode"]');
-
-  gameModeButtons.forEach((button) => {
-    button.addEventListener("change", () => {
-      gameMode = selectedGameMode();
-    });
-  });
-}
-
-function disableGameModeSelection() {
-  const gameModeButtons = document.querySelectorAll('input[name="gameMode"]');
-  gameModeButtons.forEach((button) => {
-    button.disabled = true;
-  });
-}
-
-function enableGameModeSelection() {
-  const gameModeButtons = document.querySelectorAll('input[name="gameMode"]');
-  gameModeButtons.forEach((button) => {
-    button.disabled = false;
-  });
-}
-
-function selectedGameMode() {
-  const selectedMode = document.querySelector('input[name="gameMode"]:checked');
-  const message =
-    selectedMode.value === "onePlayer"
-      ? "One Player Game Mode"
-      : "Two Player Game Mode";
-  updateStatus(message);
-  return selectedMode ? selectedMode.value : null;
-}
-
-function computerMove() {
-  updateStatus("Good luck!");
-  setTimeout(() => {
-    let computerMove;
-    if (Math.random() < strengthOfComputer) {
-      computerMove = findBestMove(board);
-    } else {
-      computerMove = findRandomMove(board);
-    }
-    let index = computerMove.row * 3 + computerMove.col;
-    const cell = cells[index];
-    updateBoard(board, cell);
-    cell.classList.add("bounce");
-    setTimeout(() => {
-      cell.classList.remove("bounce");
-    }, 500);
-  }, 500);
-}
-
-function isCellAvailable(cell) {
-  return cell.innerText === "";
-}
-
-function nextPlayer(player) {
-  return player === PLAYER_X ? PLAYER_O : PLAYER_X;
-}
-
-function row(cell) {
-  return Math.floor(cell.dataset.index / 3);
-}
-
-function col(cell) {
-  return cell.dataset.index - row(cell) * 3;
-}
-
-function updateBoard(board, cell) {
-  const r = row(cell);
-  const c = col(cell);
-  board[r][c] = currentPlayer;
-  cell.innerText = currentPlayer;
-  if (isWin(board, currentPlayer)) {
-    gameOver = true;
-    updateStatus(`${currentPlayer} wins!`, true);
+  if (gameOver || isComputerThinking || board[index] !== "") {
     return;
   }
+
+  commitMove(index);
+
+  if (!gameOver && gameMode === "onePlayer" && currentPlayer === PLAYER_O) {
+    triggerComputerMove();
+  }
+}
+
+function commitMove(index) {
+  const cell = cells[index];
+  board[index] = currentPlayer;
+  cell.dataset.mark = currentPlayer;
+  cell.setAttribute("aria-label", getCellAriaLabel(index, currentPlayer));
+  cell.appendChild(createMarkSVG(currentPlayer));
+
+  playSound(currentPlayer === PLAYER_X ? "moveX" : "moveO");
+
+  const winInfo = findWinningLine(board, currentPlayer);
+  if (winInfo) {
+    gameOver = true;
+    boardEl.dataset.hasWinner = "true";
+    syncBoardAttributes();
+
+    winInfo.indices.forEach((i) => cells[i].classList.add("highlight"));
+    drawWinLine(winInfo, currentPlayer);
+
+    scores[currentPlayer] += 1;
+    saveState();
+    updateScoreboardUI(currentPlayer);
+
+    const winLabel =
+      gameMode === "onePlayer"
+        ? currentPlayer === PLAYER_X
+          ? "You win! 🎉"
+          : "AI wins this round!"
+        : `Player ${currentPlayer} wins! 🎉`;
+
+    updateStatus(winLabel, {
+      animate: true,
+      state: currentPlayer === PLAYER_X ? "win-x" : "win-o",
+      dotPlayer: currentPlayer,
+    });
+
+    playSound("win");
+    if (gameMode === "twoPlayer" || currentPlayer === PLAYER_X) {
+      launchConfetti(currentPlayer);
+    }
+    return;
+  }
+
   if (isDraw(board)) {
     gameOver = true;
-    updateStatus("It's a CAT game!", true);
+    syncBoardAttributes();
+    scores.ties += 1;
+    saveState();
+    updateScoreboardUI("ties");
+    updateStatus("It's a Cat's game! (Draw)", {
+      animate: true,
+      state: "draw",
+      dotPlayer: "none",
+    });
+    playSound("draw");
     return;
   }
-  currentPlayer = nextPlayer(currentPlayer);
-  if (gameMode !== "onePlayer") {
-    updateStatus(`Player ${currentPlayer} turn`);
+
+  currentPlayer = currentPlayer === PLAYER_X ? PLAYER_O : PLAYER_X;
+  syncBoardAttributes();
+  updateScoreboardUI();
+
+  if (gameMode === "onePlayer") {
+    updateStatus(
+      currentPlayer === PLAYER_X ? "Your turn (X)" : "AI is thinking...",
+      { dotPlayer: currentPlayer }
+    );
+  } else {
+    updateStatus(`Player ${currentPlayer}'s turn`, { dotPlayer: currentPlayer });
   }
 }
 
-function isDraw(board) {
-  return board.flat().every((cell) => cell !== "");
+function triggerComputerMove() {
+  isComputerThinking = true;
+  const delay = 380;
+
+  computerTimeoutId = setTimeout(() => {
+    computerTimeoutId = null;
+    if (gameOver) {
+      isComputerThinking = false;
+      return;
+    }
+
+    const strength = DIFFICULTY_STRENGTH[difficulty] ?? 0.8;
+    const chosenIndex =
+      Math.random() < strength ? findBestMoveIndex(board) : findRandomMoveIndex(board);
+
+    isComputerThinking = false;
+    if (chosenIndex !== -1) {
+      commitMove(chosenIndex);
+    }
+  }, delay);
 }
 
-function isWin(board, player) {
-  for (let row = 0; row < 3; row++) {
-    if (
-      board[row][0] === player &&
-      board[row][1] === player &&
-      board[row][2] === player
-    ) {
-      showWinningCells("row", row);
-      return true;
+// Win / Draw / Minimax Engine
+function findWinningLine(b, player) {
+  for (const line of WIN_LINES) {
+    const [i, j, k] = line.indices;
+    if (b[i] === player && b[j] === player && b[k] === player) {
+      return line;
     }
   }
-  for (let col = 0; col < 3; col++) {
-    if (
-      board[0][col] === player &&
-      board[1][col] === player &&
-      board[2][col] === player
-    ) {
-      showWinningCells("col", col);
-      return true;
-    }
-  }
-  if (
-    board[0][0] === player &&
-    board[1][1] === player &&
-    board[2][2] === player
-  ) {
-    showWinningCells("dia", 0);
-    return true;
-  }
-
-  if (
-    board[0][2] === player &&
-    board[1][1] === player &&
-    board[2][0] === player
-  ) {
-    showWinningCells("dia", 1);
-    return true;
-  }
-  return false;
+  return null;
 }
 
-function showWinningCells(direction, index) {
-  let cellsToHighlight;
-  if (direction === "row") {
-    cellsToHighlight = rowToCells(index);
-  }
-  if (direction === "col") {
-    cellsToHighlight = colToCells(index);
-  }
-  if (direction === "dia") {
-    cellsToHighlight = diaToCells(index);
-  }
-  cells.forEach((cell) => {
-    if (cellsToHighlight.includes(parseInt(cell.dataset.index))) {
-      cell.classList.add("highlight");
-    }
-  });
+function isDraw(b) {
+  return b.every((cell) => cell !== "");
 }
 
-function rowToCells(row) {
-  const offset = row * 3;
-  const cells = [offset, offset + 1, offset + 2];
-  return cells;
-}
-
-function colToCells(col) {
-  const cells = [col, col + 3, col + 6];
-  return cells;
-}
-
-function diaToCells(dia) {
-  if (dia === 0) {
-    const cells = [0, 4, 8];
-    return cells;
-  }
-  if (dia === 1) {
-    const cells = [2, 4, 6];
-    return cells;
-  }
-}
-
-function evaluate(board) {
-  for (let row = 0; row < 3; row++) {
-    if (board[row][0] === board[row][1] && board[row][1] === board[row][2]) {
-      if (board[row][0] === PLAYER_X) {
-        return +10;
-      } else if (board[row][0] === PLAYER_O) {
-        return -10;
-      }
-    }
-  }
-  for (let col = 0; col < 3; col++) {
-    if (board[0][col] === board[1][col] && board[1][col] === board[2][col]) {
-      if (board[0][col] === PLAYER_X) {
-        return +10;
-      } else if (board[0][col] === PLAYER_O) {
-        return -10;
-      }
-    }
-  }
-  if (board[0][0] === board[1][1] && board[1][1] === board[2][2]) {
-    if (board[0][0] === PLAYER_X) {
-      return +10;
-    } else if (board[0][0] === PLAYER_O) {
-      return -10;
-    }
-  }
-  if (board[0][2] === board[1][1] && board[1][1] === board[2][0]) {
-    if (board[0][2] === PLAYER_X) {
-      return +10;
-    } else if (board[0][2] === PLAYER_O) {
-      return -10;
-    }
-  }
+function evaluateBoard(b) {
+  if (findWinningLine(b, PLAYER_X)) return 10;
+  if (findWinningLine(b, PLAYER_O)) return -10;
   return 0;
 }
 
-function minimax(board, depth, isMax) {
-  let score = evaluate(board);
-  if (score === 10) {
-    return score - depth;
-  }
-  if (score === -10) {
-    return score + depth;
-  }
-  if (isDraw(board)) {
-    return 0;
-  }
+function minimax(b, depth, isMax, alpha = -Infinity, beta = Infinity) {
+  const score = evaluateBoard(b);
+  if (score === 10) return score - depth;
+  if (score === -10) return score + depth;
+  if (isDraw(b)) return 0;
+
   if (isMax) {
     let best = -1000;
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 3; col++) {
-        if (board[row][col] === "") {
-          board[row][col] = PLAYER_X;
-          best = Math.max(best, minimax(board, depth + 1, false));
-          board[row][col] = "";
-        }
+    for (let i = 0; i < 9; i++) {
+      if (b[i] === "") {
+        b[i] = PLAYER_X;
+        best = Math.max(best, minimax(b, depth + 1, false, alpha, beta));
+        b[i] = "";
+        alpha = Math.max(alpha, best);
+        if (beta <= alpha) break;
       }
     }
     return best;
   } else {
-    let best = +1000;
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 3; col++) {
-        if (board[row][col] === "") {
-          board[row][col] = PLAYER_O;
-          best = Math.min(best, minimax(board, depth + 1, true));
-          board[row][col] = "";
-        }
+    let best = 1000;
+    for (let i = 0; i < 9; i++) {
+      if (b[i] === "") {
+        b[i] = PLAYER_O;
+        best = Math.min(best, minimax(b, depth + 1, true, alpha, beta));
+        b[i] = "";
+        beta = Math.min(beta, best);
+        if (beta <= alpha) break;
       }
     }
     return best;
   }
 }
 
-function findRandomMove(board) {
-  let randomMove = new Move();
-  const availableCells = Array.from(cells).filter(
-    (cell) => cell.innerText === ""
-  );
-  const index =
-    availableCells[Math.floor(Math.random() * availableCells.length)].dataset
-      .index;
-  const row = Math.floor(index / 3);
-  const col = index - row * 3;
-  randomMove.row = row;
-  randomMove.col = col;
-  return randomMove;
+function findRandomMoveIndex(b) {
+  const available = [];
+  for (let i = 0; i < 9; i++) {
+    if (b[i] === "") available.push(i);
+  }
+  if (available.length === 0) return -1;
+  return available[Math.floor(Math.random() * available.length)];
 }
 
-function findBestMove(board) {
+function findBestMoveIndex(b) {
   let bestVal = 1000;
-  let bestMove = new Move();
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 3; col++) {
-      if (board[row][col] === "") {
-        board[row][col] = PLAYER_O;
-        let moveVal = minimax(board, 0, true);
-        board[row][col] = "";
-        if (moveVal < bestVal) {
-          bestMove.row = row;
-          bestMove.col = col;
-          bestVal = moveVal;
-        }
+  let bestMoves = [];
+
+  for (let i = 0; i < 9; i++) {
+    if (b[i] === "") {
+      b[i] = PLAYER_O;
+      const moveVal = minimax(b, 0, true);
+      b[i] = "";
+
+      if (moveVal < bestVal) {
+        bestVal = moveVal;
+        bestMoves = [i];
+      } else if (moveVal === bestVal) {
+        bestMoves.push(i);
       }
     }
   }
-  return bestMove;
+
+  if (bestMoves.length === 0) return -1;
+  // Randomly pick among equally optimal moves so games feel varied
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
 }
 
-initializeGame();
+// Keyboard Grid Navigation (Arrow keys)
+function handleBoardKeyDown(event) {
+  const active = document.activeElement;
+  if (!active || !active.classList.contains("cell")) return;
+
+  const idx = Number(active.dataset.index);
+  let row = Math.floor(idx / 3);
+  let col = idx % 3;
+
+  switch (event.key) {
+    case "ArrowUp":
+      row = (row + 2) % 3;
+      break;
+    case "ArrowDown":
+      row = (row + 1) % 3;
+      break;
+    case "ArrowLeft":
+      col = (col + 2) % 3;
+      break;
+    case "ArrowRight":
+      col = (col + 1) % 3;
+      break;
+    default:
+      return;
+  }
+
+  event.preventDefault();
+  cells[row * 3 + col].focus();
+}
+
+// Celebratory Confetti Effect
+const confettiCanvas = document.getElementById("confetti-canvas");
+const confettiCtx = confettiCanvas.getContext("2d");
+let confettiParticles = [];
+let confettiAnimId = null;
+
+function launchConfetti(winner) {
+  if (
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return;
+  }
+
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+
+  const palette =
+    winner === PLAYER_X
+      ? ["#38bdf8", "#0284c7", "#34d399", "#f8fafc", "#a855f7"]
+      : ["#fbbf24", "#f97316", "#34d399", "#f8fafc", "#38bdf8"];
+
+  confettiParticles = Array.from({ length: 55 }, () => ({
+    x: confettiCanvas.width * (0.25 + Math.random() * 0.5),
+    y: confettiCanvas.height * 0.45,
+    vx: (Math.random() - 0.5) * 11,
+    vy: -Math.random() * 11 - 4,
+    size: 6 + Math.random() * 6,
+    color: palette[Math.floor(Math.random() * palette.length)],
+    rotation: Math.random() * Math.PI * 2,
+    vRot: (Math.random() - 0.5) * 0.25,
+    alpha: 1,
+  }));
+
+  if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+  animateConfetti();
+}
+
+function animateConfetti() {
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+  confettiParticles.forEach((p) => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.34; // gravity
+    p.vx *= 0.985;
+    p.rotation += p.vRot;
+    p.alpha -= 0.014;
+
+    if (p.alpha > 0) {
+      confettiCtx.save();
+      confettiCtx.globalAlpha = Math.max(0, p.alpha);
+      confettiCtx.translate(p.x, p.y);
+      confettiCtx.rotate(p.rotation);
+      confettiCtx.fillStyle = p.color;
+      confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+      confettiCtx.restore();
+    }
+  });
+
+  confettiParticles = confettiParticles.filter((p) => p.alpha > 0);
+  if (confettiParticles.length > 0) {
+    confettiAnimId = requestAnimationFrame(animateConfetti);
+  } else {
+    confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    confettiAnimId = null;
+  }
+}
+
+// Initialization & Event Listeners
+function initializeApp() {
+  loadSavedState();
+
+  soundToggleBtn.setAttribute("aria-pressed", String(soundEnabled));
+
+  soundToggleBtn.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    soundToggleBtn.setAttribute("aria-pressed", String(soundEnabled));
+    saveState();
+    if (soundEnabled) playSound("reset");
+  });
+
+  themeCheckbox.addEventListener("change", () => {
+    saveState();
+    playSound("reset");
+  });
+
+  document.querySelectorAll('input[name="gameMode"]').forEach((input) => {
+    input.addEventListener("change", (e) => {
+      gameMode = e.target.value;
+      saveState();
+      startNewRound({ alternateStarter: false, playResetSound: true });
+    });
+  });
+
+  document.querySelectorAll('input[name="difficulty"]').forEach((input) => {
+    input.addEventListener("change", (e) => {
+      difficulty = e.target.value;
+      saveState();
+      startNewRound({ alternateStarter: false, playResetSound: true });
+    });
+  });
+
+  newGameButton.addEventListener("click", () => {
+    startNewRound({ alternateStarter: true, playResetSound: true });
+  });
+
+  resetScoresButton.addEventListener("click", () => {
+    scores = { X: 0, O: 0, ties: 0 };
+    saveState();
+    updateScoreboardUI();
+    startNewRound({ alternateStarter: false, playResetSound: true });
+  });
+
+  cells.forEach((cell) => {
+    cell.addEventListener("click", handleCellClick);
+  });
+
+  boardEl.addEventListener("keydown", handleBoardKeyDown);
+
+  window.addEventListener("resize", () => {
+    if (gameOver && boardEl.dataset.hasWinner === "true") {
+      const winner = winLineSvg.dataset.winner;
+      const winInfo = findWinningLine(board, winner);
+      if (winInfo) drawWinLine(winInfo, winner);
+    }
+  });
+
+  startNewRound({ alternateStarter: false, playResetSound: false });
+}
+
+initializeApp();
