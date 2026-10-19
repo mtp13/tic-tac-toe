@@ -1,6 +1,23 @@
 const { test, expect } = require("@playwright/test");
 const AxeBuilder = require("@axe-core/playwright").default;
 
+async function waitForServiceWorker(page) {
+  await page.evaluate(async () => {
+    const reg = await navigator.serviceWorker.ready;
+    if (reg.active && reg.active.state === "activated") return;
+    await new Promise((resolve) => {
+      const sw = reg.installing || reg.waiting || reg.active;
+      if (!sw || sw.state === "activated") {
+        resolve();
+        return;
+      }
+      sw.addEventListener("statechange", () => {
+        if (sw.state === "activated") resolve();
+      });
+    });
+  });
+}
+
 test.describe("Tic Tac Toe E2E & Accessibility", () => {
   let consoleErrors = [];
   let pageErrors = [];
@@ -45,7 +62,7 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
   test("1-player game on Unbeatable: game ends and X never wins", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("./");
 
     // Select Unbeatable difficulty
     await page.locator('input[name="difficulty"][value="hard"]').check({
@@ -85,7 +102,7 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
   test("2-player game to an X win: checks status, winning cells, win line, score, and alternating starter", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("./");
 
     await page.locator('input[name="gameMode"][value="twoPlayer"]').check({
       force: true,
@@ -120,7 +137,7 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
   test("keyboard play: arrow keys and Enter/Space place marks", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("./");
 
     await page.locator('input[name="gameMode"][value="twoPlayer"]').check({
       force: true,
@@ -146,7 +163,7 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
   test("settings: 2-player mode disables difficulty and each mode keeps its own scores", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("./");
 
     const diffFieldset = page.locator("#difficulty-fieldset");
     const diffRadios = page.locator('input[name="difficulty"]');
@@ -187,7 +204,7 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
   test("persistence: scores, theme, mode, and difficulty survive reload", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("./");
 
     // Change difficulty to hard, theme to light, and mode to 2-player
     await page.locator('input[name="difficulty"][value="hard"]').check({
@@ -227,7 +244,7 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
   test("theme: toggling theme updates theme-color meta tag and background color", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("./");
 
     const themeMeta = page.locator("#theme-color-meta");
     const themeCheckbox = page.locator("#theme-checkbox");
@@ -237,17 +254,18 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
       await themeCheckbox.uncheck({ force: true });
     }
     await expect(themeMeta).toHaveAttribute("content", "#091326");
-    const darkBg = await page.evaluate(
-      () => getComputedStyle(document.body).backgroundColor,
+    await expect(page.locator("body")).toHaveCSS(
+      "background-color",
+      "rgb(9, 19, 38)",
     );
 
     // Toggle to light theme
     await themeCheckbox.check({ force: true });
     await expect(themeMeta).toHaveAttribute("content", "#eef5fc");
-    const lightBg = await page.evaluate(
-      () => getComputedStyle(document.body).backgroundColor,
+    await expect(page.locator("body")).toHaveCSS(
+      "background-color",
+      "rgb(238, 245, 252)",
     );
-    expect(lightBg).not.toBe(darkBg);
   });
 
   test("layout: no horizontal scroll and whole board visible at iPhone portrait and landscape sizes", async ({
@@ -258,7 +276,7 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
       { width: 844, height: 390 }, // Phone landscape
     ]) {
       await page.setViewportSize(viewport);
-      await page.goto("/");
+      await page.goto("./");
 
       const layoutMetrics = await page.evaluate(() => {
         const doc = document.documentElement;
@@ -293,23 +311,10 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
     page,
     context,
   }) => {
-    await page.goto("/");
+    await page.goto("./");
 
     // Wait for service worker to be registered and active
-    await page.evaluate(async () => {
-      const reg = await navigator.serviceWorker.ready;
-      if (reg.active && reg.active.state === "activated") return;
-      await new Promise((resolve) => {
-        const sw = reg.installing || reg.waiting || reg.active;
-        if (!sw || sw.state === "activated") {
-          resolve();
-          return;
-        }
-        sw.addEventListener("statechange", () => {
-          if (sw.state === "activated") resolve();
-        });
-      });
-    });
+    await waitForServiceWorker(page);
 
     await context.setOffline(true);
     try {
@@ -324,10 +329,32 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
     }
   });
 
+  test("offline: uncached navigation falls back to the cached app shell", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("./");
+    await waitForServiceWorker(page);
+
+    await context.setOffline(true);
+    try {
+      // This URL was never cached, so the service worker's fallback must serve it.
+      await page.goto("./?source=pwa");
+      await expect(page.locator(".cell")).toHaveCount(9);
+      await page.locator(".cell").nth(0).click();
+      await expect(page.locator(".cell").nth(0)).toHaveAttribute(
+        "data-mark",
+        "X",
+      );
+    } finally {
+      await context.setOffline(false);
+    }
+  });
+
   test("accessibility: axe finds no wcag2a/wcag2aa violations in dark theme, light theme, and game-over state", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("./");
 
     const themeCheckbox = page.locator("#theme-checkbox");
     if (await themeCheckbox.isChecked()) {

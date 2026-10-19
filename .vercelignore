@@ -13,3 +13,6 @@ playwright.config.*
 .htmlvalidate.json
 .editorconfig
 .git-blame-ignore-revs
+.e2e-root/
+README.md
+docs/

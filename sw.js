@@ -62,7 +62,9 @@ if (
           caches.match(request).then((cached) => {
             if (cached) return cached;
             if (request.mode === "navigate") {
-              return caches.match("./") || caches.match("index.html");
+              return caches
+                .match("./")
+                .then((response) => response || caches.match("index.html"));
             }
             return Response.error();
           }),

@@ -67,7 +67,11 @@ CI (`.github/workflows/ci.yml`) runs two jobs on Node 22 for pull requests and p
 
 ## Deployment
 
-- The site is hosted on **Vercel** as a static site. The repo root is served as-is: `index.html` is at `/` and every other non-ignored file is at its own path.
+- The site is hosted on **Vercel** as a static site.
+- Production is `https://mike.pullen.dev/tic-tac-toe/`, proxied from this Vercel project by the main site (`mtp13/mike.pullen.dev`). Previews and `tic-tac-toe-mike-pullen.vercel.app` serve the app from `/`.
+- All paths must stay relative. Never use root-anchored paths (`/…`) or a `<base>` tag.
+- Playwright runs every test both at the root and in a `/tic-tac-toe/` subfolder.
+- Vercel previews are behind login protection, so headers and `.vercelignore` can only be checked with `curl` against production after merging.
 - `.vercelignore` excludes `package.json`, `package-lock.json`, tests, docs and tooling configs so Vercel deploys only the app's runtime files and skips `npm install`. `package.json` also has no `build` script, and no build script should be added.
 - If you add a new tooling or config file, add it to `.vercelignore` so it isn't served. Never commit secrets.
 - Paths in `index.html`, `manifest.webmanifest` and `sw.js` are relative (`./`, `favicon.png`, etc.) rather than root-anchored with `/` so the app works both at a domain root and in a subfolder. **If you add or rename an asset, update `index.html`, `manifest.webmanifest` and `PRECACHE_URLS` in `sw.js`.**
