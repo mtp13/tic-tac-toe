@@ -16,6 +16,7 @@ A Tic Tac Toe game for mobile and desktop, written in plain HTML, CSS and JavaSc
 npm test                                     # node --test tests/*.test.js (Node built-in test runner)
 npm run format                               # prettier --write .
 npm run lint                                 # prettier --check . && html-validate index.html
+npm run lint:html                            # html-validate index.html
 node --check app.js                          # syntax check (CI runs this too)
 python3 -m http.server 4321 --bind 0.0.0.0   # serve locally & on LAN (port 4321 is open in UFW for mobile testing)
 ```
@@ -72,8 +73,9 @@ CI (`.github/workflows/ci.yml`) runs `npm ci`, `npm run lint`, the syntax check 
 - The repo is on GitHub at `mtp13/tic-tac-toe` (remote `origin`), and `main` is the default branch.
 - Before making changes, check the current branch. If you're on `main`, create a feature
   branch first (`feat/…`, `fix/…`, `chore/…`, `docs/…`). If you're already on a feature
-  branch for related work, keep using it.
-- When the work is finished, run `npm run format`, then `npm run lint` and `npm test`, commit once all of them pass, then push the branch and open a pull request against `main` with `gh pr create`. Every commit must be formatted, not just the last one before the PR. Give the PR a summary and test notes. You don't need to ask first. If a PR is already open for the branch, push to update it.
+  branch for related work, keep using it. Once a PR is merged, start new work on a fresh
+  branch from an up-to-date `main`, and never push to a merged branch.
+- When the work is finished, run `npm run format`, then `npm run lint` and `npm test`. Commit only once all of them pass, then push the branch and open a pull request against `main` with `gh pr create`. Every commit must be formatted, not just the last one before a PR. Give the PR a summary and test notes. You don't need to ask first. If a PR is already open for the branch, push to update it.
 - Use the `gh` CLI for PRs, issues and checking CI runs. Each PR runs CI through GitHub
   Actions; check it with `gh pr checks` and fix any failures.
 - Never commit to, push to or force-push `main` directly.
