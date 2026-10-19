@@ -4,6 +4,14 @@
   "description": "Modern Tic Tac Toe game for iPhone and Desktop",
   "private": true,
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:html": "html-validate index.html",
+    "lint": "npm run format:check && npm run lint:html"
+  },
+  "devDependencies": {
+    "html-validate": "11.16.4",
+    "prettier": "3.9.10"
   }
 }

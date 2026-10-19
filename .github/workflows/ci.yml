@@ -19,9 +19,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and check formatting
+        run: npm run lint
 
       - name: Check JavaScript syntax
         run: node --check app.js
 
       - name: Run unit & integration test suite
-        run: node --test tests/*.test.js
+        run: npm test

@@ -16,6 +16,7 @@ const {
   findBestMoveIndex,
   getCellAriaLabel,
   initializeApp,
+  commitMove,
   handleBoardKeyDown,
   getGameState,
 } = require("../app.js");
@@ -48,7 +49,7 @@ describe("Static Assets & Markup Structure", () => {
       assert.match(
         html,
         new RegExp(`<button[^>]*class="cell"[^>]*data-index="${i}"`),
-        `Expected cell button with data-index="${i}"`
+        `Expected cell button with data-index="${i}"`,
       );
     }
 
@@ -64,7 +65,7 @@ describe("Static Assets & Markup Structure", () => {
   it("validates manifest.webmanifest, maskable icons, and opaque iOS touch icon dimensions", () => {
     const raw = fs.readFileSync(
       path.join(rootDir, "manifest.webmanifest"),
-      "utf8"
+      "utf8",
     );
     const manifest = JSON.parse(raw);
 
@@ -75,7 +76,7 @@ describe("Static Assets & Markup Structure", () => {
     assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
     assert.ok(
       manifest.icons.some((icon) => icon.purpose === "maskable"),
-      "Expected at least one maskable icon entry"
+      "Expected at least one maskable icon entry",
     );
 
     for (const icon of manifest.icons) {
@@ -85,7 +86,7 @@ describe("Static Assets & Markup Structure", () => {
       assert.equal(
         `${width}x${height}`,
         icon.sizes,
-        `Size mismatch for ${icon.src}`
+        `Size mismatch for ${icon.src}`,
       );
     }
 
@@ -110,12 +111,12 @@ describe("Core Game Engine — Win & Draw Detection", () => {
         const detected = findWinningLine(board, player);
         assert.ok(
           detected,
-          `Expected win for ${player} on ${line.type} ${line.index}`
+          `Expected win for ${player} on ${line.type} ${line.index}`,
         );
         assert.deepEqual(detected.indices, line.indices);
         assert.equal(
           findWinningLine(board, player === PLAYER_X ? PLAYER_O : PLAYER_X),
-          null
+          null,
         );
       }
     }
@@ -154,7 +155,7 @@ describe("Minimax AI & Move Selection", () => {
     function explore(b, turn) {
       if (findWinningLine(b, PLAYER_X)) {
         assert.fail(
-          `AI lost when ${startingTurn} started! Board: ${JSON.stringify(b)}`
+          `AI lost when ${startingTurn} started! Board: ${JSON.stringify(b)}`,
         );
       }
       if (findWinningLine(b, PLAYER_O) || isDraw(b)) {
@@ -189,7 +190,7 @@ describe("Minimax AI & Move Selection", () => {
     explore(Array(9).fill(""), startingTurn);
     assert.ok(
       terminalStates > 100,
-      `Expected >100 terminal states, got ${terminalStates}`
+      `Expected >100 terminal states, got ${terminalStates}`,
     );
   }
 
@@ -527,7 +528,7 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
     assert.equal(state.isComputerThinking, true);
     assert.equal(
       dom.elementsById["status"].textContent,
-      "AI starts this round..."
+      "AI starts this round...",
     );
 
     t.mock.timers.tick(380);
@@ -541,7 +542,7 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
     dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
 
     [0, 4, 1, 2, 6, 3, 5, 7, 8].forEach((idx) =>
-      dom.cells[idx].trigger("click")
+      dom.cells[idx].trigger("click"),
     );
 
     const state = getGameState();
@@ -565,5 +566,160 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
 
     handleBoardKeyDown({ key: "ArrowUp", preventDefault: () => {} });
     assert.equal(global.document.activeElement, dom.cells[0]);
+  });
+
+  it("restores new-format scoresByMode and gameMode from localStorage", () => {
+    dom = setupMockDom();
+    global.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        scoresByMode: {
+          onePlayer: { X: 4, O: 2, ties: 1 },
+          twoPlayer: { X: 7, O: 5, ties: 3 },
+        },
+        gameMode: "twoPlayer",
+      }),
+    );
+    initializeApp();
+
+    const state = getGameState();
+    assert.deepEqual(state.scoresByMode, {
+      onePlayer: { X: 4, O: 2, ties: 1 },
+      twoPlayer: { X: 7, O: 5, ties: 3 },
+    });
+    assert.deepEqual(state.scores, { X: 7, O: 5, ties: 3 });
+    assert.equal(dom.elementsById["score-x"].textContent, "7");
+    assert.equal(dom.elementsById["score-o"].textContent, "5");
+    assert.equal(dom.elementsById["score-ties"].textContent, "3");
+    assert.equal(dom.elementsById["label-player-x"].textContent, "Player X");
+    assert.equal(dom.elementsById["label-player-o"].textContent, "Player O");
+
+    dom.onePlayerRadio.trigger("change", { target: { value: "onePlayer" } });
+    assert.equal(dom.elementsById["score-x"].textContent, "4");
+    assert.equal(dom.elementsById["score-o"].textContent, "2");
+    assert.equal(dom.elementsById["score-ties"].textContent, "1");
+    assert.equal(dom.elementsById["label-player-x"].textContent, "You");
+    assert.equal(dom.elementsById["label-player-o"].textContent, "AI");
+  });
+
+  it("converts old-format save with gameMode into scoresByMode for that mode", () => {
+    dom = setupMockDom();
+    global.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        scores: { X: 3, O: 1, ties: 2 },
+        gameMode: "twoPlayer",
+      }),
+    );
+    initializeApp();
+
+    const state = getGameState();
+    assert.deepEqual(state.scoresByMode.twoPlayer, { X: 3, O: 1, ties: 2 });
+    assert.deepEqual(state.scoresByMode.onePlayer, { X: 0, O: 0, ties: 0 });
+  });
+
+  it("converts old-format save without gameMode into onePlayer scores", () => {
+    dom = setupMockDom();
+    global.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        scores: { X: 3, O: 1, ties: 2 },
+      }),
+    );
+    initializeApp();
+
+    const state = getGameState();
+    assert.deepEqual(state.scoresByMode.onePlayer, { X: 3, O: 1, ties: 2 });
+    assert.deepEqual(state.scoresByMode.twoPlayer, { X: 0, O: 0, ties: 0 });
+  });
+
+  it("saves converted old-format scores under scoresByMode on subsequent save", () => {
+    dom = setupMockDom();
+    global.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        scores: { X: 3, O: 1, ties: 2 },
+        gameMode: "twoPlayer",
+      }),
+    );
+    initializeApp();
+
+    dom.onePlayerRadio.trigger("change", { target: { value: "onePlayer" } });
+    const persisted = JSON.parse(global.localStorage.getItem(STORAGE_KEY));
+    assert.deepEqual(persisted.scoresByMode, {
+      onePlayer: { X: 0, O: 0, ties: 0 },
+      twoPlayer: { X: 3, O: 1, ties: 2 },
+    });
+  });
+
+  it("round-trips scores for both modes and active gameMode across reload", (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+
+    // Win a game in 1-player mode
+    commitMove(0);
+    commitMove(3);
+    commitMove(1);
+    commitMove(4);
+    commitMove(2);
+    assert.equal(getGameState().scoresByMode.onePlayer.X, 1);
+
+    // Switch to 2-player mode and win a game
+    dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
+    [0, 3, 1, 4, 2].forEach((idx) => dom.cells[idx].trigger("click"));
+    assert.equal(getGameState().scoresByMode.twoPlayer.X, 1);
+
+    const savedJson = global.localStorage.getItem(STORAGE_KEY);
+    assert.ok(savedJson);
+
+    dom = setupMockDom();
+    global.localStorage.setItem(STORAGE_KEY, savedJson);
+    initializeApp();
+
+    const restored = getGameState();
+    assert.equal(restored.gameMode, "twoPlayer");
+    assert.deepEqual(restored.scoresByMode.onePlayer, { X: 1, O: 0, ties: 0 });
+    assert.deepEqual(restored.scoresByMode.twoPlayer, { X: 1, O: 0, ties: 0 });
+    assert.deepEqual(restored.scores, { X: 1, O: 0, ties: 0 });
+  });
+
+  it("loads defaults without throwing when saved data is malformed or invalid", () => {
+    // 1. Invalid JSON
+    dom = setupMockDom();
+    global.localStorage.setItem(STORAGE_KEY, "{not json");
+    assert.doesNotThrow(() => initializeApp());
+    let state = getGameState();
+    assert.equal(state.gameMode, "onePlayer");
+    assert.deepEqual(state.scoresByMode, {
+      onePlayer: { X: 0, O: 0, ties: 0 },
+      twoPlayer: { X: 0, O: 0, ties: 0 },
+    });
+
+    // 2. Non-numeric scores and null mode record
+    dom = setupMockDom();
+    global.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        scoresByMode: { onePlayer: { X: "abc" }, twoPlayer: null },
+      }),
+    );
+    assert.doesNotThrow(() => initializeApp());
+    state = getGameState();
+    assert.deepEqual(state.scoresByMode, {
+      onePlayer: { X: 0, O: 0, ties: 0 },
+      twoPlayer: { X: 0, O: 0, ties: 0 },
+    });
+
+    // 3. Invalid gameMode
+    dom = setupMockDom();
+    global.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        gameMode: "threePlayer",
+      }),
+    );
+    assert.doesNotThrow(() => initializeApp());
+    state = getGameState();
+    assert.equal(state.gameMode, "onePlayer");
+    assert.deepEqual(state.scores, { X: 0, O: 0, ties: 0 });
   });
 });
