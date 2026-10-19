@@ -20,15 +20,28 @@ const {
   getGameState,
 } = require("../app.js");
 
+function readPngDimensions(filePath) {
+  const buf = fs.readFileSync(filePath);
+  // PNG signature is 8 bytes, followed by IHDR chunk (4-byte length, 4-byte "IHDR", 4-byte width, 4-byte height)
+  assert.equal(buf.toString("ascii", 12, 16), "IHDR");
+  return {
+    width: buf.readUInt32BE(16),
+    height: buf.readUInt32BE(20),
+  };
+}
+
 describe("Static Assets & Markup Structure", () => {
   const rootDir = path.resolve(__dirname, "..");
 
-  it("validates index.html contains required semantic controls and mobile viewport tags", () => {
+  it("validates index.html contains valid ARIA roles, semantic controls, and mobile PWA tags", () => {
     const html = fs.readFileSync(path.join(rootDir, "index.html"), "utf8");
 
     assert.match(html, /viewport-fit=cover/);
-    assert.match(html, /apple-mobile-web-app-capable/);
+    assert.match(html, /name="mobile-web-app-capable"\s+content="yes"/);
+    assert.match(html, /name="apple-mobile-web-app-capable"\s+content="yes"/);
     assert.match(html, /manifest\.webmanifest/);
+    assert.match(html, /id="board"[^>]*role="group"/);
+    assert.doesNotMatch(html, /role="gridcell"/);
 
     for (let i = 0; i < 9; i++) {
       assert.match(
@@ -38,6 +51,8 @@ describe("Static Assets & Markup Structure", () => {
       );
     }
 
+    assert.match(html, /id="difficulty-fieldset"/);
+    assert.match(html, /id="theme-color-meta"/);
     assert.match(html, /id="score-x"/);
     assert.match(html, /id="score-o"/);
     assert.match(html, /id="score-ties"/);
@@ -45,7 +60,7 @@ describe("Static Assets & Markup Structure", () => {
     assert.match(html, /id="reset-scores-button"/);
   });
 
-  it("validates manifest.webmanifest is valid JSON with required PWA fields", () => {
+  it("validates manifest.webmanifest and verifies all PNG icon dimensions match declared sizes", () => {
     const raw = fs.readFileSync(
       path.join(rootDir, "manifest.webmanifest"),
       "utf8"
@@ -53,8 +68,20 @@ describe("Static Assets & Markup Structure", () => {
     const manifest = JSON.parse(raw);
 
     assert.equal(manifest.name, "Tic Tac Toe");
+    assert.equal(manifest.start_url, "./");
     assert.equal(manifest.display, "standalone");
-    assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 1);
+    assert.equal(manifest.theme_color, "#091326");
+    assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
+
+    for (const icon of manifest.icons) {
+      const iconPath = path.join(rootDir, icon.src);
+      assert.ok(fs.existsSync(iconPath), `Missing icon file: ${icon.src}`);
+      const { width, height } = readPngDimensions(iconPath);
+      assert.equal(`${width}x${height}`, icon.sizes, `Size mismatch for ${icon.src}`);
+    }
+
+    const touchIconDims = readPngDimensions(path.join(rootDir, "icon-180.png"));
+    assert.deepEqual(touchIconDims, { width: 180, height: 180 });
   });
 });
 
@@ -181,9 +208,7 @@ describe("Minimax AI & Move Selection", () => {
       } else {
         const bestMoves = findBestMoves(b);
         assert.ok(bestMoves.length > 0);
-        // Verify findBestMoveIndex returns a member of bestMoves
         assert.ok(bestMoves.includes(findBestMoveIndex(b)));
-        // Branch across EVERY tied optimal move that findBestMoveIndex can pick
         for (const aiMove of bestMoves) {
           b[aiMove] = PLAYER_O;
           explore(b, PLAYER_X);
@@ -193,7 +218,10 @@ describe("Minimax AI & Move Selection", () => {
     }
 
     explore(Array(9).fill(""), PLAYER_X);
-    assert.ok(terminalStates > 100, `Expected >100 terminal states, got ${terminalStates}`);
+    assert.ok(
+      terminalStates > 100,
+      `Expected >100 terminal states, got ${terminalStates}`
+    );
   });
 
   it("proves AI (O) is unbeatable across every tied optimal move when O (AI) starts", () => {
@@ -233,7 +261,10 @@ describe("Minimax AI & Move Selection", () => {
     }
 
     explore(Array(9).fill(""), PLAYER_O);
-    assert.ok(terminalStates > 100, `Expected >100 terminal states, got ${terminalStates}`);
+    assert.ok(
+      terminalStates > 100,
+      `Expected >100 terminal states, got ${terminalStates}`
+    );
   });
 });
 
@@ -318,6 +349,8 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
     register("reset-scores-button", "button");
     register("sound-toggle", "button");
     register("theme-checkbox", "input");
+    register("theme-color-meta", "meta");
+    register("difficulty-fieldset", "fieldset");
     register("win-line-svg", "svg");
     register("win-line", "line");
     register("score-x", "output");
@@ -362,7 +395,7 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
     global.window = {
       innerWidth: 1024,
       innerHeight: 768,
-      matchMedia: () => ({ matches: true }),
+      matchMedia: () => ({ matches: false }),
       addEventListener: (type, fn) => listeners.set(type, fn),
     };
 
@@ -402,7 +435,6 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
   it("plays a complete 2-player game via cell click events to an X win", () => {
     dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
 
-    // Click cells: X: 0, O: 3, X: 1, O: 4, X: 2 (top row win)
     dom.cells[0].trigger("click");
     dom.cells[3].trigger("click");
     dom.cells[1].trigger("click");
@@ -422,26 +454,44 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
     assert.equal(persisted.scores.X, 1);
   });
 
+  it("disables the difficulty fieldset in 2-player mode and re-enables it in 1-player mode", () => {
+    assert.equal(dom.elementsById["difficulty-fieldset"].disabled, false);
+
+    dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
+    assert.equal(dom.elementsById["difficulty-fieldset"].disabled, true);
+
+    dom.onePlayerRadio.trigger("change", { target: { value: "onePlayer" } });
+    assert.equal(dom.elementsById["difficulty-fieldset"].disabled, false);
+  });
+
+  it("updates the theme-color meta tag when toggling light/dark theme", () => {
+    const themeMeta = dom.elementsById["theme-color-meta"];
+    const themeCheckbox = dom.elementsById["theme-checkbox"];
+
+    assert.equal(themeMeta.getAttribute("content"), "#091326");
+
+    themeCheckbox.checked = true;
+    themeCheckbox.trigger("change");
+    assert.equal(themeMeta.getAttribute("content"), "#eef5fc");
+  });
+
   it("ignores clicks on already-occupied cells and clicks after gameOver", () => {
     dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
 
-    dom.cells[0].trigger("click"); // X plays 0
-    assert.equal(getGameState().board[0], PLAYER_X);
-    assert.equal(getGameState().currentPlayer, PLAYER_O);
-
-    // Clicking cell 0 again must be ignored
     dom.cells[0].trigger("click");
     assert.equal(getGameState().board[0], PLAYER_X);
     assert.equal(getGameState().currentPlayer, PLAYER_O);
 
-    // Finish the game: O:3, X:1, O:4, X:2 (X wins)
+    dom.cells[0].trigger("click");
+    assert.equal(getGameState().board[0], PLAYER_X);
+    assert.equal(getGameState().currentPlayer, PLAYER_O);
+
     dom.cells[3].trigger("click");
     dom.cells[1].trigger("click");
     dom.cells[4].trigger("click");
     dom.cells[2].trigger("click");
     assert.equal(getGameState().gameOver, true);
 
-    // Clicking an empty cell (e.g. 8) after game over must be ignored
     dom.cells[8].trigger("click");
     assert.equal(getGameState().board[8], "");
     assert.equal(getGameState().scores.X, 1);
@@ -452,18 +502,15 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     dom.hardRadio.trigger("change", { target: { value: "hard" } });
 
-    // Human (X) clicks corner 0
     dom.cells[0].trigger("click");
     let state = getGameState();
     assert.equal(state.board[0], PLAYER_X);
     assert.equal(state.currentPlayer, PLAYER_O);
     assert.equal(state.isComputerThinking, true);
 
-    // Human tries to click cell 1 while AI is thinking -> must be ignored
     dom.cells[1].trigger("click");
     assert.equal(getGameState().board[1], "");
 
-    // Advance timer by 380ms so AI plays its move (center 4 on hard difficulty)
     t.mock.timers.tick(380);
     state = getGameState();
     assert.equal(state.isComputerThinking, false);
@@ -475,7 +522,6 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
 
     assert.equal(getGameState().startingPlayer, PLAYER_X);
-    // Click New Round -> startingPlayer alternates to O (AI)
     dom.elementsById["new-game-button"].trigger("click");
 
     let state = getGameState();
@@ -497,7 +543,6 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
   it("records a draw game via cell clicks and increments draws counter", () => {
     dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
 
-    // Draw sequence: X:0, O:4, X:1, O:2, X:6, O:3, X:5, O:7, X:8
     [0, 4, 1, 2, 6, 3, 5, 7, 8].forEach((idx) =>
       dom.cells[idx].trigger("click")
     );

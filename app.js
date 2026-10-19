@@ -53,6 +53,8 @@ let scoreCardO = null;
 let scoreCardTies = null;
 let labelPlayerX = null;
 let labelPlayerO = null;
+let difficultyFieldset = null;
+let themeColorMeta = null;
 let confettiCanvas = null;
 let confettiCtx = null;
 
@@ -77,6 +79,8 @@ function bindDomElements() {
   scoreCardTies = document.getElementById("score-card-ties");
   labelPlayerX = document.getElementById("label-player-x");
   labelPlayerO = document.getElementById("label-player-o");
+  difficultyFieldset = document.getElementById("difficulty-fieldset");
+  themeColorMeta = document.getElementById("theme-color-meta");
   confettiCanvas = document.getElementById("confetti-canvas");
   confettiCtx = confettiCanvas ? confettiCanvas.getContext("2d") : null;
 }
@@ -695,6 +699,19 @@ function getGameState() {
   };
 }
 
+function syncThemeColor() {
+  if (!themeColorMeta || !themeCheckbox) return;
+  themeColorMeta.setAttribute(
+    "content",
+    themeCheckbox.checked ? "#eef5fc" : "#091326"
+  );
+}
+
+function syncModeControls() {
+  if (!difficultyFieldset) return;
+  difficultyFieldset.disabled = gameMode === "twoPlayer";
+}
+
 // Initialization & Event Listeners
 function initializeApp() {
   if (computerTimeoutId) {
@@ -715,6 +732,8 @@ function initializeApp() {
   if (!boardEl) return;
 
   loadSavedState();
+  syncThemeColor();
+  syncModeControls();
 
   soundToggleBtn.setAttribute("aria-pressed", String(soundEnabled));
 
@@ -726,6 +745,7 @@ function initializeApp() {
   });
 
   themeCheckbox.addEventListener("change", () => {
+    syncThemeColor();
     saveState();
     playSound("reset");
   });
@@ -733,6 +753,8 @@ function initializeApp() {
   document.querySelectorAll('input[name="gameMode"]').forEach((input) => {
     input.addEventListener("change", (e) => {
       gameMode = e.target.value;
+      scores = { X: 0, O: 0, ties: 0 };
+      syncModeControls();
       saveState();
       startNewRound({ alternateStarter: false, playResetSound: true });
     });
@@ -742,7 +764,7 @@ function initializeApp() {
     input.addEventListener("change", (e) => {
       difficulty = e.target.value;
       saveState();
-      startNewRound({ alternateStarter: false, playResetSound: true });
+      playSound("reset");
     });
   });
 

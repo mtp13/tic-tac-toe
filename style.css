@@ -387,6 +387,7 @@
     transition: opacity 0.25s ease, filter 0.25s ease;
   }
 
+  .difficulty-control:disabled,
   .mode-form:has(input[name="gameMode"][value="twoPlayer"]:checked)
     .difficulty-control {
     opacity: 0.35;
@@ -788,6 +789,11 @@
     .btn,
     #win-line {
       transition: none;
+    }
+
+    .status-banner.scale-up,
+    .score-card.score-bump {
+      scale: 1;
     }
   }
 
