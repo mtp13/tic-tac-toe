@@ -98,6 +98,56 @@ describe("Static Assets & Markup Structure", () => {
     assert.equal(touchIcon.colorType, 2);
   });
 
+  it("has Open Graph and Twitter tags with absolute production URLs and a 1200x630 image", () => {
+    const html = fs.readFileSync(path.join(rootDir, "index.html"), "utf8");
+    const prefix = "https://mike.pullen.dev/tic-tac-toe/";
+
+    const meta = {};
+    for (const tag of html.match(/<meta\b[^>]*>/g) ?? []) {
+      const key = tag.match(/\b(?:property|name)="([^"]+)"/)?.[1];
+      const content = tag.match(/\bcontent="([^"]*)"/)?.[1];
+      if (key && content !== undefined) meta[key] = content;
+    }
+
+    for (const key of [
+      "og:type",
+      "og:title",
+      "og:description",
+      "og:url",
+      "og:image",
+      "og:image:width",
+      "og:image:height",
+      "og:image:alt",
+      "twitter:card",
+    ]) {
+      assert.ok(meta[key], `Missing meta tag: ${key}`);
+    }
+
+    assert.equal(meta["twitter:card"], "summary_large_image");
+    assert.equal(meta["og:description"], meta.description);
+    assert.ok(meta["og:url"].startsWith(prefix));
+    assert.ok(meta["og:image"].startsWith(prefix));
+    assert.equal(meta["og:image"], `${prefix}og-image.png`);
+
+    const imagePath = path.join(rootDir, "og-image.png");
+    assert.ok(fs.existsSync(imagePath), "Missing og-image.png");
+    const { width, height } = readPngHeader(imagePath);
+    assert.equal(`${width}x${height}`, "1200x630");
+    assert.equal(meta["og:image:width"], "1200");
+    assert.equal(meta["og:image:height"], "630");
+  });
+
+  it("keeps every in-page href and src relative (no root-anchored paths)", () => {
+    const html = fs.readFileSync(path.join(rootDir, "index.html"), "utf8");
+    const refs = [...html.matchAll(/\b(?:href|src)="([^"]*)"/g)].map(
+      (m) => m[1],
+    );
+    assert.ok(refs.length > 0);
+    for (const ref of refs) {
+      assert.ok(!ref.startsWith("/"), `Root-anchored path: ${ref}`);
+    }
+  });
+
   it("validates sw.js PRECACHE_URLS covers all index.html and manifest assets and exists on disk", () => {
     const html = fs.readFileSync(path.join(rootDir, "index.html"), "utf8");
     const manifest = JSON.parse(
