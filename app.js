@@ -845,7 +845,24 @@ function initializeApp() {
     }
   });
 
+  registerServiceWorker();
   startNewRound({ alternateStarter: false, playResetSound: false });
+}
+
+function registerServiceWorker() {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return;
+  }
+  const register = () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {
+      // Ignore service worker registration failures
+    });
+  };
+  if (document.readyState === "complete") {
+    register();
+  } else {
+    window.addEventListener("load", register);
+  }
 }
 
 if (typeof document !== "undefined") {
