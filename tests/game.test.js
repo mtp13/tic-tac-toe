@@ -20,6 +20,7 @@ const {
   handleBoardKeyDown,
   getGameState,
 } = require("../app.js");
+const { PRECACHE_URLS } = require("../sw.js");
 
 function readPngHeader(filePath) {
   const buf = fs.readFileSync(filePath);
@@ -144,6 +145,50 @@ describe("Static Assets & Markup Structure", () => {
     assert.ok(refs.length > 0);
     for (const ref of refs) {
       assert.ok(!ref.startsWith("/"), `Root-anchored path: ${ref}`);
+    }
+  });
+
+  it("validates sw.js PRECACHE_URLS covers all index.html and manifest assets and exists on disk", () => {
+    const html = fs.readFileSync(path.join(rootDir, "index.html"), "utf8");
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(rootDir, "manifest.webmanifest"), "utf8"),
+    );
+
+    const normalizedPrecache = new Set(
+      PRECACHE_URLS.map((u) => u.replace(/^\.\//, "")),
+    );
+
+    // Every local href/src in index.html must be in PRECACHE_URLS
+    const attrMatches = [...html.matchAll(/\b(?:href|src)="([^"]+)"/g)];
+    assert.ok(attrMatches.length > 0);
+    for (const [, ref] of attrMatches) {
+      if (/^(?:https?:|data:|#)/.test(ref)) continue;
+      const cleanRef = ref.replace(/^\.\//, "");
+      assert.ok(
+        normalizedPrecache.has(cleanRef),
+        `index.html asset "${ref}" is missing from sw.js PRECACHE_URLS`,
+      );
+    }
+
+    // Every icon in manifest.webmanifest must be in PRECACHE_URLS
+    for (const icon of manifest.icons) {
+      const cleanSrc = icon.src.replace(/^\.\//, "");
+      assert.ok(
+        normalizedPrecache.has(cleanSrc),
+        `manifest icon "${icon.src}" is missing from sw.js PRECACHE_URLS`,
+      );
+    }
+
+    // Every entry in PRECACHE_URLS must exist on disk
+    for (const entry of PRECACHE_URLS) {
+      const targetPath =
+        entry === "./"
+          ? path.join(rootDir, "index.html")
+          : path.join(rootDir, entry.replace(/^\.\//, ""));
+      assert.ok(
+        fs.existsSync(targetPath),
+        `PRECACHE_URLS entry "${entry}" does not exist on disk at ${targetPath}`,
+      );
     }
   });
 });
