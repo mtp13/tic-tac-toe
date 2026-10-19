@@ -33,26 +33,54 @@ let soundEnabled = true;
 let scores = { X: 0, O: 0, ties: 0 };
 
 // DOM Elements
-const boardEl = document.getElementById("board");
-const cells = Array.from(document.querySelectorAll(".cell"));
-const statusBanner = document.querySelector(".status-banner");
-const statusText = document.getElementById("status");
-const statusDot = document.getElementById("status-dot");
-const newGameButton = document.getElementById("new-game-button");
-const resetScoresButton = document.getElementById("reset-scores-button");
-const soundToggleBtn = document.getElementById("sound-toggle");
-const themeCheckbox = document.getElementById("theme-checkbox");
-const winLineSvg = document.getElementById("win-line-svg");
-const winLine = document.getElementById("win-line");
+let boardEl = null;
+let cells = [];
+let statusBanner = null;
+let statusText = null;
+let statusDot = null;
+let newGameButton = null;
+let resetScoresButton = null;
+let soundToggleBtn = null;
+let themeCheckbox = null;
+let winLineSvg = null;
+let winLine = null;
 
-const scoreXEl = document.getElementById("score-x");
-const scoreOEl = document.getElementById("score-o");
-const scoreTiesEl = document.getElementById("score-ties");
-const scoreCardX = document.getElementById("score-card-x");
-const scoreCardO = document.getElementById("score-card-o");
-const scoreCardTies = document.getElementById("score-card-ties");
-const labelPlayerX = document.getElementById("label-player-x");
-const labelPlayerO = document.getElementById("label-player-o");
+let scoreXEl = null;
+let scoreOEl = null;
+let scoreTiesEl = null;
+let scoreCardX = null;
+let scoreCardO = null;
+let scoreCardTies = null;
+let labelPlayerX = null;
+let labelPlayerO = null;
+let confettiCanvas = null;
+let confettiCtx = null;
+
+function bindDomElements() {
+  if (typeof document === "undefined") return;
+  boardEl = document.getElementById("board");
+  cells = Array.from(document.querySelectorAll(".cell"));
+  statusBanner = document.querySelector(".status-banner");
+  statusText = document.getElementById("status");
+  statusDot = document.getElementById("status-dot");
+  newGameButton = document.getElementById("new-game-button");
+  resetScoresButton = document.getElementById("reset-scores-button");
+  soundToggleBtn = document.getElementById("sound-toggle");
+  themeCheckbox = document.getElementById("theme-checkbox");
+  winLineSvg = document.getElementById("win-line-svg");
+  winLine = document.getElementById("win-line");
+
+  scoreXEl = document.getElementById("score-x");
+  scoreOEl = document.getElementById("score-o");
+  scoreTiesEl = document.getElementById("score-ties");
+  scoreCardX = document.getElementById("score-card-x");
+  scoreCardO = document.getElementById("score-card-o");
+  scoreCardTies = document.getElementById("score-card-ties");
+  labelPlayerX = document.getElementById("label-player-x");
+  labelPlayerO = document.getElementById("label-player-o");
+  confettiCanvas = document.getElementById("confetti-canvas");
+  confettiCtx = confettiCanvas ? confettiCanvas.getContext("2d") : null;
+}
 
 // Web Audio Synthesizer for tactile, zero-dependency sound effects
 let audioCtx = null;
@@ -580,13 +608,13 @@ function handleBoardKeyDown(event) {
 }
 
 // Celebratory Confetti Effect
-const confettiCanvas = document.getElementById("confetti-canvas");
-const confettiCtx = confettiCanvas.getContext("2d");
 let confettiParticles = [];
 let confettiAnimId = null;
 
 function launchConfetti(winner) {
+  if (!confettiCanvas || !confettiCtx) return;
   if (
+    typeof window !== "undefined" &&
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ) {
@@ -618,6 +646,7 @@ function launchConfetti(winner) {
 }
 
 function animateConfetti() {
+  if (!confettiCanvas || !confettiCtx) return;
   confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
 
   confettiParticles.forEach((p) => {
@@ -648,8 +677,25 @@ function animateConfetti() {
   }
 }
 
+function getGameState() {
+  return {
+    board: [...board],
+    currentPlayer,
+    startingPlayer,
+    gameOver,
+    isComputerThinking,
+    gameMode,
+    difficulty,
+    soundEnabled,
+    scores: { ...scores },
+  };
+}
+
 // Initialization & Event Listeners
 function initializeApp() {
+  bindDomElements();
+  if (!boardEl) return;
+
   loadSavedState();
 
   soundToggleBtn.setAttribute("aria-pressed", String(soundEnabled));
@@ -710,4 +756,29 @@ function initializeApp() {
   startNewRound({ alternateStarter: false, playResetSound: false });
 }
 
-initializeApp();
+if (typeof document !== "undefined") {
+  initializeApp();
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    PLAYER_X,
+    PLAYER_O,
+    DIFFICULTY_STRENGTH,
+    WIN_LINES,
+    STORAGE_KEY,
+    findWinningLine,
+    isDraw,
+    evaluateBoard,
+    minimax,
+    findRandomMoveIndex,
+    findBestMoveIndex,
+    getCellAriaLabel,
+    initializeApp,
+    startNewRound,
+    commitMove,
+    handleCellClick,
+    handleBoardKeyDown,
+    getGameState,
+  };
+}

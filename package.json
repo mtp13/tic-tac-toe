@@ -1,0 +1,9 @@
+{
+  "name": "tic-tac-toe",
+  "version": "2.0.0",
+  "description": "Modern Tic Tac Toe game for iPhone and Desktop",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
