@@ -30,7 +30,11 @@ let computerTimeoutId = null;
 let gameMode = "onePlayer";
 let difficulty = "medium";
 let soundEnabled = true;
-let scores = { X: 0, O: 0, ties: 0 };
+let scoresByMode = {
+  onePlayer: { X: 0, O: 0, ties: 0 },
+  twoPlayer: { X: 0, O: 0, ties: 0 },
+};
+let scores = scoresByMode.onePlayer;
 
 // DOM Elements
 let boardEl = null;
@@ -158,28 +162,40 @@ function loadSavedState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      // Default to light theme if system prefers light
       if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
         themeCheckbox.checked = true;
       }
       return;
     }
     const saved = JSON.parse(raw);
-    if (saved.scores) {
-      scores.X = Number(saved.scores.X) || 0;
-      scores.O = Number(saved.scores.O) || 0;
-      scores.ties = Number(saved.scores.ties) || 0;
+    if (saved.gameMode === "onePlayer" || saved.gameMode === "twoPlayer") {
+      gameMode = saved.gameMode;
+      const radio = document.querySelector(`input[name="gameMode"][value="${gameMode}"]`);
+      if (radio) radio.checked = true;
     }
+    if (saved.scoresByMode) {
+      for (const mode of ["onePlayer", "twoPlayer"]) {
+        if (saved.scoresByMode[mode]) {
+          scoresByMode[mode] = {
+            X: Number(saved.scoresByMode[mode].X) || 0,
+            O: Number(saved.scoresByMode[mode].O) || 0,
+            ties: Number(saved.scoresByMode[mode].ties) || 0,
+          };
+        }
+      }
+    } else if (saved.scores) {
+      scoresByMode[gameMode] = {
+        X: Number(saved.scores.X) || 0,
+        O: Number(saved.scores.O) || 0,
+        ties: Number(saved.scores.ties) || 0,
+      };
+    }
+    scores = scoresByMode[gameMode];
     if (typeof saved.soundEnabled === "boolean") {
       soundEnabled = saved.soundEnabled;
     }
     if (typeof saved.lightTheme === "boolean") {
       themeCheckbox.checked = saved.lightTheme;
-    }
-    if (saved.gameMode === "onePlayer" || saved.gameMode === "twoPlayer") {
-      gameMode = saved.gameMode;
-      const radio = document.querySelector(`input[name="gameMode"][value="${gameMode}"]`);
-      if (radio) radio.checked = true;
     }
     if (saved.difficulty && DIFFICULTY_STRENGTH[saved.difficulty] !== undefined) {
       difficulty = saved.difficulty;
@@ -197,6 +213,7 @@ function saveState() {
       STORAGE_KEY,
       JSON.stringify({
         scores,
+        scoresByMode,
         soundEnabled,
         lightTheme: themeCheckbox.checked,
         gameMode,
@@ -696,6 +713,10 @@ function getGameState() {
     difficulty,
     soundEnabled,
     scores: { ...scores },
+    scoresByMode: {
+      onePlayer: { ...scoresByMode.onePlayer },
+      twoPlayer: { ...scoresByMode.twoPlayer },
+    },
   };
 }
 
@@ -714,22 +735,17 @@ function syncModeControls() {
 
 // Initialization & Event Listeners
 function initializeApp() {
-  if (computerTimeoutId) {
-    clearTimeout(computerTimeoutId);
-    computerTimeoutId = null;
-  }
-  board = Array(9).fill("");
-  currentPlayer = PLAYER_X;
-  startingPlayer = PLAYER_X;
-  gameOver = false;
-  isComputerThinking = false;
+  bindDomElements();
+  if (!boardEl) return;
+
   gameMode = "onePlayer";
   difficulty = "medium";
   soundEnabled = true;
-  scores = { X: 0, O: 0, ties: 0 };
-
-  bindDomElements();
-  if (!boardEl) return;
+  scoresByMode = {
+    onePlayer: { X: 0, O: 0, ties: 0 },
+    twoPlayer: { X: 0, O: 0, ties: 0 },
+  };
+  scores = scoresByMode.onePlayer;
 
   loadSavedState();
   syncThemeColor();
@@ -753,7 +769,7 @@ function initializeApp() {
   document.querySelectorAll('input[name="gameMode"]').forEach((input) => {
     input.addEventListener("change", (e) => {
       gameMode = e.target.value;
-      scores = { X: 0, O: 0, ties: 0 };
+      scores = scoresByMode[gameMode];
       syncModeControls();
       saveState();
       startNewRound({ alternateStarter: false, playResetSound: true });
@@ -773,7 +789,8 @@ function initializeApp() {
   });
 
   resetScoresButton.addEventListener("click", () => {
-    scores = { X: 0, O: 0, ties: 0 };
+    scoresByMode[gameMode] = { X: 0, O: 0, ties: 0 };
+    scores = scoresByMode[gameMode];
     saveState();
     updateScoreboardUI();
     startNewRound({ alternateStarter: false, playResetSound: true });

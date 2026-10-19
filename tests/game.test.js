@@ -20,13 +20,14 @@ const {
   getGameState,
 } = require("../app.js");
 
-function readPngDimensions(filePath) {
+function readPngHeader(filePath) {
   const buf = fs.readFileSync(filePath);
-  // PNG signature is 8 bytes, followed by IHDR chunk (4-byte length, 4-byte "IHDR", 4-byte width, 4-byte height)
+  // PNG signature is 8 bytes, followed by IHDR chunk (4-byte length, 4-byte "IHDR", 4-byte width, 4-byte height, 1-byte bitDepth, 1-byte colorType)
   assert.equal(buf.toString("ascii", 12, 16), "IHDR");
   return {
     width: buf.readUInt32BE(16),
     height: buf.readUInt32BE(20),
+    colorType: buf.readUInt8(25),
   };
 }
 
@@ -60,7 +61,7 @@ describe("Static Assets & Markup Structure", () => {
     assert.match(html, /id="reset-scores-button"/);
   });
 
-  it("validates manifest.webmanifest and verifies all PNG icon dimensions match declared sizes", () => {
+  it("validates manifest.webmanifest, maskable icons, and opaque iOS touch icon dimensions", () => {
     const raw = fs.readFileSync(
       path.join(rootDir, "manifest.webmanifest"),
       "utf8"
@@ -72,16 +73,27 @@ describe("Static Assets & Markup Structure", () => {
     assert.equal(manifest.display, "standalone");
     assert.equal(manifest.theme_color, "#091326");
     assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
+    assert.ok(
+      manifest.icons.some((icon) => icon.purpose === "maskable"),
+      "Expected at least one maskable icon entry"
+    );
 
     for (const icon of manifest.icons) {
       const iconPath = path.join(rootDir, icon.src);
       assert.ok(fs.existsSync(iconPath), `Missing icon file: ${icon.src}`);
-      const { width, height } = readPngDimensions(iconPath);
-      assert.equal(`${width}x${height}`, icon.sizes, `Size mismatch for ${icon.src}`);
+      const { width, height } = readPngHeader(iconPath);
+      assert.equal(
+        `${width}x${height}`,
+        icon.sizes,
+        `Size mismatch for ${icon.src}`
+      );
     }
 
-    const touchIconDims = readPngDimensions(path.join(rootDir, "icon-180.png"));
-    assert.deepEqual(touchIconDims, { width: 180, height: 180 });
+    // iOS apple-touch-icon must be 180x180 and opaque RGB (colorType 2, no alpha channel) so iOS doesn't render black corners
+    const touchIcon = readPngHeader(path.join(rootDir, "icon-180.png"));
+    assert.equal(touchIcon.width, 180);
+    assert.equal(touchIcon.height, 180);
+    assert.equal(touchIcon.colorType, 2);
   });
 });
 
@@ -135,6 +147,52 @@ describe("Core Game Engine — Win & Draw Detection", () => {
 });
 
 describe("Minimax AI & Move Selection", () => {
+  function assertAiUnbeatable(startingTurn) {
+    const visited = new Set();
+    let terminalStates = 0;
+
+    function explore(b, turn) {
+      if (findWinningLine(b, PLAYER_X)) {
+        assert.fail(
+          `AI lost when ${startingTurn} started! Board: ${JSON.stringify(b)}`
+        );
+      }
+      if (findWinningLine(b, PLAYER_O) || isDraw(b)) {
+        terminalStates++;
+        return;
+      }
+
+      const key = `${turn}:${b.join(",")}`;
+      if (visited.has(key)) return;
+      visited.add(key);
+
+      if (turn === PLAYER_X) {
+        for (let i = 0; i < 9; i++) {
+          if (b[i] === "") {
+            b[i] = PLAYER_X;
+            explore(b, PLAYER_O);
+            b[i] = "";
+          }
+        }
+      } else {
+        const bestMoves = findBestMoves(b);
+        assert.ok(bestMoves.length > 0);
+        assert.ok(bestMoves.includes(findBestMoveIndex(b)));
+        for (const aiMove of bestMoves) {
+          b[aiMove] = PLAYER_O;
+          explore(b, PLAYER_X);
+          b[aiMove] = "";
+        }
+      }
+    }
+
+    explore(Array(9).fill(""), startingTurn);
+    assert.ok(
+      terminalStates > 100,
+      `Expected >100 terminal states, got ${terminalStates}`
+    );
+  }
+
   it("evaluates terminal boards accurately", () => {
     const xWin = ["X", "X", "X", "O", "O", "", "", "", ""];
     const oWin = ["X", "X", "", "O", "O", "O", "X", "", ""];
@@ -181,90 +239,11 @@ describe("Minimax AI & Move Selection", () => {
   });
 
   it("proves AI (O) is unbeatable across every tied optimal move when X starts", () => {
-    const visited = new Set();
-    let terminalStates = 0;
-
-    function explore(b, turn) {
-      if (findWinningLine(b, PLAYER_X)) {
-        assert.fail(`AI lost when X started! Board: ${JSON.stringify(b)}`);
-      }
-      if (findWinningLine(b, PLAYER_O) || isDraw(b)) {
-        terminalStates++;
-        return;
-      }
-
-      const key = `${turn}:${b.join(",")}`;
-      if (visited.has(key)) return;
-      visited.add(key);
-
-      if (turn === PLAYER_X) {
-        for (let i = 0; i < 9; i++) {
-          if (b[i] === "") {
-            b[i] = PLAYER_X;
-            explore(b, PLAYER_O);
-            b[i] = "";
-          }
-        }
-      } else {
-        const bestMoves = findBestMoves(b);
-        assert.ok(bestMoves.length > 0);
-        assert.ok(bestMoves.includes(findBestMoveIndex(b)));
-        for (const aiMove of bestMoves) {
-          b[aiMove] = PLAYER_O;
-          explore(b, PLAYER_X);
-          b[aiMove] = "";
-        }
-      }
-    }
-
-    explore(Array(9).fill(""), PLAYER_X);
-    assert.ok(
-      terminalStates > 100,
-      `Expected >100 terminal states, got ${terminalStates}`
-    );
+    assertAiUnbeatable(PLAYER_X);
   });
 
   it("proves AI (O) is unbeatable across every tied optimal move when O (AI) starts", () => {
-    const visited = new Set();
-    let terminalStates = 0;
-
-    function explore(b, turn) {
-      if (findWinningLine(b, PLAYER_X)) {
-        assert.fail(`AI lost when O started! Board: ${JSON.stringify(b)}`);
-      }
-      if (findWinningLine(b, PLAYER_O) || isDraw(b)) {
-        terminalStates++;
-        return;
-      }
-
-      const key = `${turn}:${b.join(",")}`;
-      if (visited.has(key)) return;
-      visited.add(key);
-
-      if (turn === PLAYER_X) {
-        for (let i = 0; i < 9; i++) {
-          if (b[i] === "") {
-            b[i] = PLAYER_X;
-            explore(b, PLAYER_O);
-            b[i] = "";
-          }
-        }
-      } else {
-        const bestMoves = findBestMoves(b);
-        assert.ok(bestMoves.length > 0);
-        for (const aiMove of bestMoves) {
-          b[aiMove] = PLAYER_O;
-          explore(b, PLAYER_X);
-          b[aiMove] = "";
-        }
-      }
-    }
-
-    explore(Array(9).fill(""), PLAYER_O);
-    assert.ok(
-      terminalStates > 100,
-      `Expected >100 terminal states, got ${terminalStates}`
-    );
+    assertAiUnbeatable(PLAYER_O);
   });
 });
 
@@ -452,6 +431,24 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
 
     const persisted = JSON.parse(global.localStorage.getItem(STORAGE_KEY));
     assert.equal(persisted.scores.X, 1);
+  });
+
+  it("preserves separate score records when switching between 1P and 2P modes", () => {
+    // Win a game in 2P mode
+    dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
+    [0, 3, 1, 4, 2].forEach((idx) => dom.cells[idx].trigger("click"));
+    assert.equal(getGameState().scores.X, 1);
+    assert.equal(dom.elementsById["score-x"].textContent, "1");
+
+    // Switch to 1P mode -> 1P scores are 0
+    dom.onePlayerRadio.trigger("change", { target: { value: "onePlayer" } });
+    assert.equal(getGameState().scores.X, 0);
+    assert.equal(dom.elementsById["score-x"].textContent, "0");
+
+    // Switch back to 2P mode -> 2P score of 1 is preserved
+    dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
+    assert.equal(getGameState().scores.X, 1);
+    assert.equal(dom.elementsById["score-x"].textContent, "1");
   });
 
   it("disables the difficulty fieldset in 2-player mode and re-enables it in 1-player mode", () => {
