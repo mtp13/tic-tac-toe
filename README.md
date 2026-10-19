@@ -14,6 +14,7 @@ A fast, modern Tic Tac Toe for phones and desktops, with a minimax AI and a 2-pl
 - **Dark and light themes.**
 - **Keyboard play:** use the arrow keys to move around the board, and Enter or Space to place a mark.
 - **Installable PWA:** add it to your home screen or desktop.
+- **Works offline:** after your first visit, you can play with no connection, including when it's installed as an app.
 - **Sound effects** that you can mute at any time.
 
 ## Development
@@ -26,12 +27,15 @@ python3 -m http.server 4321
 
 Then open <http://localhost:4321/>.
 
-| Command          | What it does                                  |
-| ---------------- | --------------------------------------------- |
-| `npm ci`         | Install the dev tooling (once)                |
-| `npm test`       | Run the unit and DOM tests (Node test runner) |
-| `npm run lint`   | Check formatting (Prettier) and HTML validity |
-| `npm run format` | Format the code with Prettier                 |
+| Command            | What it does                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| `npm ci`           | Install the dev tooling (once)                                                                     |
+| `npm test`         | Run the unit and DOM tests (Node test runner)                                                      |
+| `npm run test:e2e` | Run the Playwright browser tests (Chromium and WebKit, including offline and accessibility checks) |
+| `npm run lint`     | Check formatting (Prettier) and HTML validity                                                      |
+| `npm run format`   | Format the code with Prettier                                                                      |
+
+The first `npm run test:e2e` run needs the browsers: `npx playwright install chromium webkit`.
 
 ## Tech
 
