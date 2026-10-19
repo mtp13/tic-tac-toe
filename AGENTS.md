@@ -39,6 +39,7 @@ CI (`.github/workflows/ci.yml`) runs two jobs on Node 22 for pull requests and p
 | `vercel.json`, `.vercelignore`          | Security/CSP and cache headers, plus deploy exclusion list                        |
 | `tests/game.test.js`                    | Unit tests plus DOM integration tests against a hand-rolled mock DOM              |
 | `e2e/*.spec.js`, `playwright.config.js` | Real-browser Playwright E2E, offline, layout and axe accessibility tests          |
+| `e2e/csp-fixture.js`                    | Playwright fixture that applies the `vercel.json` CSP to every HTML document      |
 
 ## How `app.js` works
 
@@ -61,6 +62,8 @@ CI (`.github/workflows/ci.yml`) runs two jobs on Node 22 for pull requests and p
 ## Testing
 
 - Unit tests (`npm test`) cover game logic, AI, persistence and static asset structure using only `node:test` and `node:assert/strict`. Playwright (`npm run test:e2e`) covers real-browser behaviour, layout, offline play and accessibility (`@axe-core/playwright`) in Desktop Chromium and Mobile WebKit. Run both before committing.
+- **E2E specs must import `test` and `expect` from `./csp-fixture`, not from `@playwright/test`.** The local `python3 -m http.server` sends no headers, so the fixture reads the CSP from `vercel.json` and adds it to every same-origin HTML document. Without it the CSP-violation assertion can never fail. The fixture is shared with the other vanilla apps and has no game-specific code, so keep it identical to theirs.
+- **Ports:** E2E uses 4311 (root) and 4312 (`/tic-tac-toe/` subfolder); the other apps use their own ports. 4321 is deliberately avoided because it is commonly held by a manual dev server for phone testing. `reuseExistingServer` is `false`, so a leftover server on either port makes `npm run test:e2e` fail instead of testing the wrong app. Stop your own server on 4311/4312 before running E2E, and don't kill processes you didn't start.
 - The DOM unit tests use a mock in `setupMockDom()`. **If you add a `getElementById` or `querySelector` lookup to `app.js`, add it to the mock** or `initializeApp()` will crash in tests.
 - The unit tests share `app.js`'s module state; `beforeEach` sets up a fresh mock DOM + `localStorage` and calls `initializeApp()` (which resets settings and calls `startNewRound()`), so tests must not rely on the order they run in.
 - Add or update tests for any change to the game logic, the AI, persistence or UI. Run `npm run lint`, `npm test` and `npm run test:e2e` before you finish.
