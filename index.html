@@ -121,8 +121,9 @@
       </header>
 
       <section class="controls-panel" aria-label="Game settings">
-        <form class="mode-form" id="settings-form">
+        <div class="mode-form" id="settings-form">
           <fieldset class="segmented-control" aria-label="Game Mode">
+            <legend hidden>Game Mode</legend>
             <label class="segment-option">
               <input
                 type="radio"
@@ -174,6 +175,7 @@
             id="difficulty-fieldset"
             aria-label="AI Difficulty"
           >
+            <legend hidden>AI Difficulty</legend>
             <label class="segment-option">
               <input type="radio" name="difficulty" value="easy" />
               <span>Casual</span>
@@ -187,7 +189,7 @@
               <span>Unbeatable</span>
             </label>
           </fieldset>
-        </form>
+        </div>
       </section>
 
       <section class="scoreboard" aria-label="Scoreboard">
