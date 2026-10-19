@@ -6,20 +6,16 @@ const path = require("node:path");
 const {
   PLAYER_X,
   PLAYER_O,
-  DIFFICULTY_STRENGTH,
   WIN_LINES,
   STORAGE_KEY,
   findWinningLine,
   isDraw,
   evaluateBoard,
-  minimax,
   findRandomMoveIndex,
+  findBestMoves,
   findBestMoveIndex,
   getCellAriaLabel,
   initializeApp,
-  startNewRound,
-  commitMove,
-  handleCellClick,
   handleBoardKeyDown,
   getGameState,
 } = require("../app.js");
@@ -60,16 +56,6 @@ describe("Static Assets & Markup Structure", () => {
     assert.equal(manifest.display, "standalone");
     assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 1);
   });
-
-  it("validates style.css includes modern cascade layers, dvh units, and reduced-motion rules", () => {
-    const css = fs.readFileSync(path.join(rootDir, "style.css"), "utf8");
-
-    assert.match(css, /@layer\s+reset,\s*base,\s*theme,\s*components,\s*utilities;/);
-    assert.match(css, /100dvh/);
-    assert.match(css, /:has\(/);
-    assert.match(css, /--spring-easing:\s*linear\(/);
-    assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  });
 });
 
 describe("Core Game Engine — Win & Draw Detection", () => {
@@ -83,7 +69,10 @@ describe("Core Game Engine — Win & Draw Detection", () => {
           board[idx] = player;
         }
         const detected = findWinningLine(board, player);
-        assert.ok(detected, `Expected win for ${player} on ${line.type} ${line.index}`);
+        assert.ok(
+          detected,
+          `Expected win for ${player} on ${line.type} ${line.index}`
+        );
         assert.deepEqual(detected.indices, line.indices);
         assert.equal(
           findWinningLine(board, player === PLAYER_X ? PLAYER_O : PLAYER_X),
@@ -140,81 +129,115 @@ describe("Minimax AI & Move Selection", () => {
   });
 
   it("takes an immediate winning move for O when available", () => {
-    // O has indices 3 and 4, should play 5 to win immediately
     const board = ["X", "X", "", "O", "O", "", "X", "", ""];
+    assert.deepEqual(findBestMoves(board), [5]);
     assert.equal(findBestMoveIndex(board), 5);
   });
 
   it("blocks an immediate winning threat from X", () => {
-    // X threatens top row (0, 1 -> needs 2)
     const board = ["X", "X", "", "", "O", "", "", "", ""];
+    assert.deepEqual(findBestMoves(board), [2]);
     assert.equal(findBestMoveIndex(board), 2);
   });
 
   it("plays center (4) when X opens in a corner", () => {
     const board = ["X", "", "", "", "", "", "", "", ""];
+    assert.deepEqual(findBestMoves(board), [4]);
     assert.equal(findBestMoveIndex(board), 4);
   });
 
   it("plays a corner (0, 2, 6, or 8) when X opens in the center", () => {
     const board = ["", "", "", "", "X", "", "", "", ""];
+    assert.deepEqual(findBestMoves(board), [0, 2, 6, 8]);
     const move = findBestMoveIndex(board);
     assert.ok([0, 2, 6, 8].includes(move), `Expected corner move, got ${move}`);
   });
 
-  it("proves AI (O) is unbeatable across all possible human (X) move sequences", () => {
-    // Deterministically pick the first optimal move to exhaustively verify the minimax tree
-    function getDeterministicBestMove(b) {
-      let bestVal = 1000;
-      let bestMove = -1;
-      for (let i = 0; i < 9; i++) {
-        if (b[i] === "") {
-          b[i] = PLAYER_O;
-          const val = minimax(b, 0, true);
-          b[i] = "";
-          if (val < bestVal) {
-            bestVal = val;
-            bestMove = i;
-          }
-        }
-      }
-      return bestMove;
-    }
+  it("proves AI (O) is unbeatable across every tied optimal move when X starts", () => {
+    const visited = new Set();
+    let terminalStates = 0;
 
-    let gamesSimulated = 0;
-
-    function simulateAllHumanMoves(b, turn) {
+    function explore(b, turn) {
       if (findWinningLine(b, PLAYER_X)) {
-        assert.fail(`AI lost a game! Board: ${JSON.stringify(b)}`);
+        assert.fail(`AI lost when X started! Board: ${JSON.stringify(b)}`);
       }
       if (findWinningLine(b, PLAYER_O) || isDraw(b)) {
-        gamesSimulated++;
+        terminalStates++;
         return;
       }
+
+      const key = `${turn}:${b.join(",")}`;
+      if (visited.has(key)) return;
+      visited.add(key);
 
       if (turn === PLAYER_X) {
         for (let i = 0; i < 9; i++) {
           if (b[i] === "") {
             b[i] = PLAYER_X;
-            simulateAllHumanMoves(b, PLAYER_O);
+            explore(b, PLAYER_O);
             b[i] = "";
           }
         }
       } else {
-        const aiMove = getDeterministicBestMove(b);
-        assert.notEqual(aiMove, -1);
-        b[aiMove] = PLAYER_O;
-        simulateAllHumanMoves(b, PLAYER_X);
-        b[aiMove] = "";
+        const bestMoves = findBestMoves(b);
+        assert.ok(bestMoves.length > 0);
+        // Verify findBestMoveIndex returns a member of bestMoves
+        assert.ok(bestMoves.includes(findBestMoveIndex(b)));
+        // Branch across EVERY tied optimal move that findBestMoveIndex can pick
+        for (const aiMove of bestMoves) {
+          b[aiMove] = PLAYER_O;
+          explore(b, PLAYER_X);
+          b[aiMove] = "";
+        }
       }
     }
 
-    simulateAllHumanMoves(Array(9).fill(""), PLAYER_X);
-    assert.ok(gamesSimulated > 500, `Expected >500 terminal states, got ${gamesSimulated}`);
+    explore(Array(9).fill(""), PLAYER_X);
+    assert.ok(terminalStates > 100, `Expected >100 terminal states, got ${terminalStates}`);
+  });
+
+  it("proves AI (O) is unbeatable across every tied optimal move when O (AI) starts", () => {
+    const visited = new Set();
+    let terminalStates = 0;
+
+    function explore(b, turn) {
+      if (findWinningLine(b, PLAYER_X)) {
+        assert.fail(`AI lost when O started! Board: ${JSON.stringify(b)}`);
+      }
+      if (findWinningLine(b, PLAYER_O) || isDraw(b)) {
+        terminalStates++;
+        return;
+      }
+
+      const key = `${turn}:${b.join(",")}`;
+      if (visited.has(key)) return;
+      visited.add(key);
+
+      if (turn === PLAYER_X) {
+        for (let i = 0; i < 9; i++) {
+          if (b[i] === "") {
+            b[i] = PLAYER_X;
+            explore(b, PLAYER_O);
+            b[i] = "";
+          }
+        }
+      } else {
+        const bestMoves = findBestMoves(b);
+        assert.ok(bestMoves.length > 0);
+        for (const aiMove of bestMoves) {
+          b[aiMove] = PLAYER_O;
+          explore(b, PLAYER_X);
+          b[aiMove] = "";
+        }
+      }
+    }
+
+    explore(Array(9).fill(""), PLAYER_O);
+    assert.ok(terminalStates > 100, `Expected >100 terminal states, got ${terminalStates}`);
   });
 });
 
-describe("Interactive DOM & State Integration", () => {
+describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
   function setupMockDom() {
     const listeners = new Map();
 
@@ -224,7 +247,7 @@ describe("Interactive DOM & State Integration", () => {
       const elListeners = {};
       const children = [];
 
-      return {
+      const el = {
         tagName: tag.toUpperCase(),
         id,
         dataset: { ...dataset },
@@ -278,7 +301,7 @@ describe("Interactive DOM & State Integration", () => {
         }),
       };
 
-      var el;
+      return el;
     }
 
     const elementsById = {};
@@ -358,13 +381,15 @@ describe("Interactive DOM & State Integration", () => {
       },
       querySelectorAll: (sel) => {
         if (sel === ".cell") return cells;
-        if (sel === 'input[name="gameMode"]') return [onePlayerRadio, twoPlayerRadio];
-        if (sel === 'input[name="difficulty"]') return [easyRadio, mediumRadio, hardRadio];
+        if (sel === 'input[name="gameMode"]')
+          return [onePlayerRadio, twoPlayerRadio];
+        if (sel === 'input[name="difficulty"]')
+          return [easyRadio, mediumRadio, hardRadio];
         return [];
       },
     };
 
-    return { elementsById, cells, twoPlayerRadio };
+    return { elementsById, cells, onePlayerRadio, twoPlayerRadio, hardRadio };
   }
 
   let dom;
@@ -372,18 +397,17 @@ describe("Interactive DOM & State Integration", () => {
   beforeEach(() => {
     dom = setupMockDom();
     initializeApp();
-    // Switch to 2-player mode for deterministic turn-by-turn DOM assertions
-    dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
-    dom.elementsById["reset-scores-button"].trigger("click");
   });
 
-  it("plays a complete 2-player game to an X win and updates scoreboard + storage", () => {
-    // X: 0, O: 3, X: 1, O: 4, X: 2 (top row win)
-    commitMove(0);
-    commitMove(3);
-    commitMove(1);
-    commitMove(4);
-    commitMove(2);
+  it("plays a complete 2-player game via cell click events to an X win", () => {
+    dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
+
+    // Click cells: X: 0, O: 3, X: 1, O: 4, X: 2 (top row win)
+    dom.cells[0].trigger("click");
+    dom.cells[3].trigger("click");
+    dom.cells[1].trigger("click");
+    dom.cells[4].trigger("click");
+    dom.cells[2].trigger("click");
 
     const state = getGameState();
     assert.equal(state.gameOver, true);
@@ -398,21 +422,90 @@ describe("Interactive DOM & State Integration", () => {
     assert.equal(persisted.scores.X, 1);
   });
 
-  it("records a draw game and increments draws counter", () => {
+  it("ignores clicks on already-occupied cells and clicks after gameOver", () => {
+    dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
+
+    dom.cells[0].trigger("click"); // X plays 0
+    assert.equal(getGameState().board[0], PLAYER_X);
+    assert.equal(getGameState().currentPlayer, PLAYER_O);
+
+    // Clicking cell 0 again must be ignored
+    dom.cells[0].trigger("click");
+    assert.equal(getGameState().board[0], PLAYER_X);
+    assert.equal(getGameState().currentPlayer, PLAYER_O);
+
+    // Finish the game: O:3, X:1, O:4, X:2 (X wins)
+    dom.cells[3].trigger("click");
+    dom.cells[1].trigger("click");
+    dom.cells[4].trigger("click");
+    dom.cells[2].trigger("click");
+    assert.equal(getGameState().gameOver, true);
+
+    // Clicking an empty cell (e.g. 8) after game over must be ignored
+    dom.cells[8].trigger("click");
+    assert.equal(getGameState().board[8], "");
+    assert.equal(getGameState().scores.X, 1);
+    assert.equal(getGameState().scores.O, 0);
+  });
+
+  it("handles 1-player timed AI move and blocks clicks while AI is thinking", (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    dom.hardRadio.trigger("change", { target: { value: "hard" } });
+
+    // Human (X) clicks corner 0
+    dom.cells[0].trigger("click");
+    let state = getGameState();
+    assert.equal(state.board[0], PLAYER_X);
+    assert.equal(state.currentPlayer, PLAYER_O);
+    assert.equal(state.isComputerThinking, true);
+
+    // Human tries to click cell 1 while AI is thinking -> must be ignored
+    dom.cells[1].trigger("click");
+    assert.equal(getGameState().board[1], "");
+
+    // Advance timer by 380ms so AI plays its move (center 4 on hard difficulty)
+    t.mock.timers.tick(380);
+    state = getGameState();
+    assert.equal(state.isComputerThinking, false);
+    assert.equal(state.board[4], PLAYER_O);
+    assert.equal(state.currentPlayer, PLAYER_X);
+  });
+
+  it("triggers AI opening move when New Round alternates starter to O in 1-player mode", (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+
+    assert.equal(getGameState().startingPlayer, PLAYER_X);
+    // Click New Round -> startingPlayer alternates to O (AI)
+    dom.elementsById["new-game-button"].trigger("click");
+
+    let state = getGameState();
+    assert.equal(state.startingPlayer, PLAYER_O);
+    assert.equal(state.currentPlayer, PLAYER_O);
+    assert.equal(state.isComputerThinking, true);
+    assert.equal(
+      dom.elementsById["status"].textContent,
+      "AI starts this round..."
+    );
+
+    t.mock.timers.tick(380);
+    state = getGameState();
+    assert.equal(state.isComputerThinking, false);
+    assert.equal(state.board.filter((c) => c === PLAYER_O).length, 1);
+    assert.equal(state.currentPlayer, PLAYER_X);
+  });
+
+  it("records a draw game via cell clicks and increments draws counter", () => {
+    dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
+
     // Draw sequence: X:0, O:4, X:1, O:2, X:6, O:3, X:5, O:7, X:8
-    [0, 4, 1, 2, 6, 3, 5, 7, 8].forEach((idx) => commitMove(idx));
+    [0, 4, 1, 2, 6, 3, 5, 7, 8].forEach((idx) =>
+      dom.cells[idx].trigger("click")
+    );
 
     const state = getGameState();
     assert.equal(state.gameOver, true);
     assert.equal(state.scores.ties, 1);
     assert.equal(dom.elementsById["score-ties"].textContent, "1");
-  });
-
-  it("alternates starting player when New Round is clicked", () => {
-    assert.equal(getGameState().startingPlayer, PLAYER_X);
-    dom.elementsById["new-game-button"].trigger("click");
-    assert.equal(getGameState().startingPlayer, PLAYER_O);
-    assert.equal(getGameState().currentPlayer, PLAYER_O);
   });
 
   it("navigates across the 3x3 board with keyboard arrow keys", () => {

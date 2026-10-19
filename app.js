@@ -57,7 +57,6 @@ let confettiCanvas = null;
 let confettiCtx = null;
 
 function bindDomElements() {
-  if (typeof document === "undefined") return;
   boardEl = document.getElementById("board");
   cells = Array.from(document.querySelectorAll(".cell"));
   statusBanner = document.querySelector(".status-banner");
@@ -553,7 +552,7 @@ function findRandomMoveIndex(b) {
   return available[Math.floor(Math.random() * available.length)];
 }
 
-function findBestMoveIndex(b) {
+function findBestMoves(b) {
   let bestVal = 1000;
   let bestMoves = [];
 
@@ -572,6 +571,11 @@ function findBestMoveIndex(b) {
     }
   }
 
+  return bestMoves;
+}
+
+function findBestMoveIndex(b) {
+  const bestMoves = findBestMoves(b);
   if (bestMoves.length === 0) return -1;
   // Randomly pick among equally optimal moves so games feel varied
   return bestMoves[Math.floor(Math.random() * bestMoves.length)];
@@ -693,6 +697,20 @@ function getGameState() {
 
 // Initialization & Event Listeners
 function initializeApp() {
+  if (computerTimeoutId) {
+    clearTimeout(computerTimeoutId);
+    computerTimeoutId = null;
+  }
+  board = Array(9).fill("");
+  currentPlayer = PLAYER_X;
+  startingPlayer = PLAYER_X;
+  gameOver = false;
+  isComputerThinking = false;
+  gameMode = "onePlayer";
+  difficulty = "medium";
+  soundEnabled = true;
+  scores = { X: 0, O: 0, ties: 0 };
+
   bindDomElements();
   if (!boardEl) return;
 
@@ -772,6 +790,7 @@ if (typeof module !== "undefined" && module.exports) {
     evaluateBoard,
     minimax,
     findRandomMoveIndex,
+    findBestMoves,
     findBestMoveIndex,
     getCellAriaLabel,
     initializeApp,
