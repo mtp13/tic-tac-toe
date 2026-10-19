@@ -48,7 +48,7 @@ describe("Static Assets & Markup Structure", () => {
       assert.match(
         html,
         new RegExp(`<button[^>]*class="cell"[^>]*data-index="${i}"`),
-        `Expected cell button with data-index="${i}"`
+        `Expected cell button with data-index="${i}"`,
       );
     }
 
@@ -64,7 +64,7 @@ describe("Static Assets & Markup Structure", () => {
   it("validates manifest.webmanifest, maskable icons, and opaque iOS touch icon dimensions", () => {
     const raw = fs.readFileSync(
       path.join(rootDir, "manifest.webmanifest"),
-      "utf8"
+      "utf8",
     );
     const manifest = JSON.parse(raw);
 
@@ -75,7 +75,7 @@ describe("Static Assets & Markup Structure", () => {
     assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
     assert.ok(
       manifest.icons.some((icon) => icon.purpose === "maskable"),
-      "Expected at least one maskable icon entry"
+      "Expected at least one maskable icon entry",
     );
 
     for (const icon of manifest.icons) {
@@ -85,7 +85,7 @@ describe("Static Assets & Markup Structure", () => {
       assert.equal(
         `${width}x${height}`,
         icon.sizes,
-        `Size mismatch for ${icon.src}`
+        `Size mismatch for ${icon.src}`,
       );
     }
 
@@ -110,12 +110,12 @@ describe("Core Game Engine — Win & Draw Detection", () => {
         const detected = findWinningLine(board, player);
         assert.ok(
           detected,
-          `Expected win for ${player} on ${line.type} ${line.index}`
+          `Expected win for ${player} on ${line.type} ${line.index}`,
         );
         assert.deepEqual(detected.indices, line.indices);
         assert.equal(
           findWinningLine(board, player === PLAYER_X ? PLAYER_O : PLAYER_X),
-          null
+          null,
         );
       }
     }
@@ -154,7 +154,7 @@ describe("Minimax AI & Move Selection", () => {
     function explore(b, turn) {
       if (findWinningLine(b, PLAYER_X)) {
         assert.fail(
-          `AI lost when ${startingTurn} started! Board: ${JSON.stringify(b)}`
+          `AI lost when ${startingTurn} started! Board: ${JSON.stringify(b)}`,
         );
       }
       if (findWinningLine(b, PLAYER_O) || isDraw(b)) {
@@ -189,7 +189,7 @@ describe("Minimax AI & Move Selection", () => {
     explore(Array(9).fill(""), startingTurn);
     assert.ok(
       terminalStates > 100,
-      `Expected >100 terminal states, got ${terminalStates}`
+      `Expected >100 terminal states, got ${terminalStates}`,
     );
   }
 
@@ -527,7 +527,7 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
     assert.equal(state.isComputerThinking, true);
     assert.equal(
       dom.elementsById["status"].textContent,
-      "AI starts this round..."
+      "AI starts this round...",
     );
 
     t.mock.timers.tick(380);
@@ -541,7 +541,7 @@ describe("Interactive DOM, Click Guards & Timed AI Integration", () => {
     dom.twoPlayerRadio.trigger("change", { target: { value: "twoPlayer" } });
 
     [0, 4, 1, 2, 6, 3, 5, 7, 8].forEach((idx) =>
-      dom.cells[idx].trigger("click")
+      dom.cells[idx].trigger("click"),
     );
 
     const state = getGameState();

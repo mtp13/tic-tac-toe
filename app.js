@@ -106,7 +106,13 @@ function getAudioContext() {
   return audioCtx;
 }
 
-function playTone(freq, duration = 0.09, type = "sine", delay = 0, gainPeak = 0.12) {
+function playTone(
+  freq,
+  duration = 0.09,
+  type = "sine",
+  delay = 0,
+  gainPeak = 0.12,
+) {
   const ctx = getAudioContext();
   if (!ctx) return;
 
@@ -162,7 +168,10 @@ function loadSavedState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      if (
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: light)").matches
+      ) {
         themeCheckbox.checked = true;
       }
       return;
@@ -170,7 +179,9 @@ function loadSavedState() {
     const saved = JSON.parse(raw);
     if (saved.gameMode === "onePlayer" || saved.gameMode === "twoPlayer") {
       gameMode = saved.gameMode;
-      const radio = document.querySelector(`input[name="gameMode"][value="${gameMode}"]`);
+      const radio = document.querySelector(
+        `input[name="gameMode"][value="${gameMode}"]`,
+      );
       if (radio) radio.checked = true;
     }
     if (saved.scoresByMode) {
@@ -197,9 +208,14 @@ function loadSavedState() {
     if (typeof saved.lightTheme === "boolean") {
       themeCheckbox.checked = saved.lightTheme;
     }
-    if (saved.difficulty && DIFFICULTY_STRENGTH[saved.difficulty] !== undefined) {
+    if (
+      saved.difficulty &&
+      DIFFICULTY_STRENGTH[saved.difficulty] !== undefined
+    ) {
       difficulty = saved.difficulty;
-      const diffRadio = document.querySelector(`input[name="difficulty"][value="${difficulty}"]`);
+      const diffRadio = document.querySelector(
+        `input[name="difficulty"][value="${difficulty}"]`,
+      );
       if (diffRadio) diffRadio.checked = true;
     }
   } catch {
@@ -218,7 +234,7 @@ function saveState() {
         lightTheme: themeCheckbox.checked,
         gameMode,
         difficulty,
-      })
+      }),
     );
   } catch {
     // Ignore storage errors
@@ -288,8 +304,14 @@ function updateScoreboardUI(bumpKey = null) {
     labelPlayerO.textContent = "Player O";
   }
 
-  scoreCardX.classList.toggle("active-turn", !gameOver && currentPlayer === PLAYER_X);
-  scoreCardO.classList.toggle("active-turn", !gameOver && currentPlayer === PLAYER_O);
+  scoreCardX.classList.toggle(
+    "active-turn",
+    !gameOver && currentPlayer === PLAYER_X,
+  );
+  scoreCardO.classList.toggle(
+    "active-turn",
+    !gameOver && currentPlayer === PLAYER_O,
+  );
 
   if (bumpKey) {
     const targetCard =
@@ -305,7 +327,10 @@ function updateScoreboardUI(bumpKey = null) {
   }
 }
 
-function updateStatus(message, { animate = false, state = "turn", dotPlayer = currentPlayer } = {}) {
+function updateStatus(
+  message,
+  { animate = false, state = "turn", dotPlayer = currentPlayer } = {},
+) {
   statusText.textContent = message;
   statusBanner.dataset.state = state;
   statusDot.dataset.player = dotPlayer;
@@ -356,7 +381,10 @@ function drawWinLine(winInfo, winner) {
   winLineSvg.classList.add("visible");
 }
 
-function startNewRound({ alternateStarter = false, playResetSound = false } = {}) {
+function startNewRound({
+  alternateStarter = false,
+  playResetSound = false,
+} = {}) {
   if (computerTimeoutId) {
     clearTimeout(computerTimeoutId);
     computerTimeoutId = null;
@@ -391,7 +419,10 @@ function startNewRound({ alternateStarter = false, playResetSound = false } = {}
   }
 
   if (gameMode === "onePlayer" && currentPlayer === PLAYER_O) {
-    updateStatus("AI starts this round...", { animate: true, dotPlayer: PLAYER_O });
+    updateStatus("AI starts this round...", {
+      animate: true,
+      dotPlayer: PLAYER_O,
+    });
     triggerComputerMove();
   } else {
     const startMsg =
@@ -481,10 +512,12 @@ function commitMove(index) {
   if (gameMode === "onePlayer") {
     updateStatus(
       currentPlayer === PLAYER_X ? "Your turn (X)" : "AI is thinking...",
-      { dotPlayer: currentPlayer }
+      { dotPlayer: currentPlayer },
     );
   } else {
-    updateStatus(`Player ${currentPlayer}'s turn`, { dotPlayer: currentPlayer });
+    updateStatus(`Player ${currentPlayer}'s turn`, {
+      dotPlayer: currentPlayer,
+    });
   }
 }
 
@@ -501,7 +534,9 @@ function triggerComputerMove() {
 
     const strength = DIFFICULTY_STRENGTH[difficulty] ?? 0.8;
     const chosenIndex =
-      Math.random() < strength ? findBestMoveIndex(board) : findRandomMoveIndex(board);
+      Math.random() < strength
+        ? findBestMoveIndex(board)
+        : findRandomMoveIndex(board);
 
     isComputerThinking = false;
     if (chosenIndex !== -1) {
@@ -724,7 +759,7 @@ function syncThemeColor() {
   if (!themeColorMeta || !themeCheckbox) return;
   themeColorMeta.setAttribute(
     "content",
-    themeCheckbox.checked ? "#eef5fc" : "#091326"
+    themeCheckbox.checked ? "#eef5fc" : "#091326",
   );
 }
 

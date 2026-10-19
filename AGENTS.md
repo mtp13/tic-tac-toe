@@ -23,15 +23,15 @@ CI (`.github/workflows/ci.yml`) runs the syntax check and the tests on Node 22 f
 
 ## Layout
 
-| File | Purpose |
-| --- | --- |
-| `index.html` | All markup. The 9 cells are static `<button class="cell" data-index="0-8">`. |
-| `app.js` | All game logic: state, AI, sound (Web Audio), persistence, confetti, event wiring |
-| `style.css` | Styles, organised in `@layer reset, base, theme, components, utilities` |
-| `reset.css` | The `reset` layer |
-| `manifest.webmanifest` | PWA manifest |
-| `favicon.png`, `icon-{180,192,512}.png` | Favicon (128×128), iOS touch icon (180×180 opaque RGB), and PWA/maskable icons |
-| `tests/game.test.js` | Unit tests plus DOM integration tests against a hand-rolled mock DOM |
+| File                                    | Purpose                                                                           |
+| --------------------------------------- | --------------------------------------------------------------------------------- |
+| `index.html`                            | All markup. The 9 cells are static `<button class="cell" data-index="0-8">`.      |
+| `app.js`                                | All game logic: state, AI, sound (Web Audio), persistence, confetti, event wiring |
+| `style.css`                             | Styles, organised in `@layer reset, base, theme, components, utilities`           |
+| `reset.css`                             | The `reset` layer                                                                 |
+| `manifest.webmanifest`                  | PWA manifest                                                                      |
+| `favicon.png`, `icon-{180,192,512}.png` | Favicon (128×128), iOS touch icon (180×180 opaque RGB), and PWA/maskable icons    |
+| `tests/game.test.js`                    | Unit tests plus DOM integration tests against a hand-rolled mock DOM              |
 
 ## How `app.js` works
 
