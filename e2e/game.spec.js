@@ -1,4 +1,4 @@
-const { test, expect } = require("@playwright/test");
+const { test, expect } = require("./csp-fixture");
 const AxeBuilder = require("@axe-core/playwright").default;
 
 async function waitForServiceWorker(page) {
@@ -316,6 +316,8 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
     // Wait for service worker to be registered and active
     await waitForServiceWorker(page);
 
+    // Stop the CSP fixture's routing so the service worker answers offline requests.
+    await page.unrouteAll({ behavior: "ignoreErrors" });
     await context.setOffline(true);
     try {
       await page.reload();
@@ -336,6 +338,8 @@ test.describe("Tic Tac Toe E2E & Accessibility", () => {
     await page.goto("./");
     await waitForServiceWorker(page);
 
+    // Stop the CSP fixture's routing so the service worker answers offline requests.
+    await page.unrouteAll({ behavior: "ignoreErrors" });
     await context.setOffline(true);
     try {
       // This URL was never cached, so the service worker's fallback must serve it.

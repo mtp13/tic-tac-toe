@@ -6,8 +6,8 @@ if (!process.env.CI) {
 }
 
 // Trailing slashes matter: tests navigate with page.goto("./").
-const ROOT_URL = "http://localhost:4321/";
-const SUBFOLDER_URL = "http://localhost:4322/tic-tac-toe/";
+const ROOT_URL = "http://localhost:4311/";
+const SUBFOLDER_URL = "http://localhost:4312/tic-tac-toe/";
 
 module.exports = defineConfig({
   testDir: "./e2e",
@@ -41,16 +41,16 @@ module.exports = defineConfig({
   ],
   webServer: [
     {
-      command: "python3 -m http.server 4321",
+      command: "python3 -m http.server 4311",
       url: ROOT_URL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
     },
     {
       // Serves the repo under /tic-tac-toe/, like the production subfolder.
       command:
-        "mkdir -p .e2e-root && ln -sfn .. .e2e-root/tic-tac-toe && python3 -m http.server 4322 --directory .e2e-root",
+        "mkdir -p .e2e-root && ln -sfn .. .e2e-root/tic-tac-toe && python3 -m http.server 4312 --directory .e2e-root",
       url: SUBFOLDER_URL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
     },
   ],
 });
