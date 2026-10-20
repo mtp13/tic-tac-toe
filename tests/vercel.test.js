@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const repoRoot = path.join(__dirname, "..");
+const DEFAULT_BRANCH = "master";
 
 function readVercelConfig() {
   return JSON.parse(
@@ -30,24 +31,24 @@ function ciPushBranches() {
 }
 
 describe("vercel.json", () => {
-  it("deploys only master (branch names with / need **, not *)", () => {
-    assert.deepEqual(readVercelConfig().git?.deploymentEnabled, {
-      master: true,
-      "**": false,
-    });
+  it("deploys the default branch and blocks the catch-all", () => {
+    const enabled = readVercelConfig().git?.deploymentEnabled ?? {};
+    assert.equal(
+      enabled[DEFAULT_BRANCH],
+      true,
+      "the default branch must deploy, or production stops updating",
+    );
+    assert.equal(
+      enabled["**"],
+      false,
+      "the catch-all rule must stay false, or branch previews eat the daily budget",
+    );
   });
 
-  it("deploys the branch that CI runs on", () => {
-    const config = readVercelConfig();
-    const deployed = Object.entries(config.git?.deploymentEnabled ?? {})
-      .filter(([, enabled]) => enabled)
-      .map(([branch]) => branch);
-    const ciBranches = ciPushBranches();
-    for (const branch of deployed) {
-      assert.ok(
-        ciBranches.has(branch),
-        `CI does not run on ${branch}, so it would never be deployed`,
-      );
-    }
+  it("CI runs on the default branch", () => {
+    assert.ok(
+      ciPushBranches().has(DEFAULT_BRANCH),
+      "CI does not run on the default branch, so a merge records no CI run",
+    );
   });
 });

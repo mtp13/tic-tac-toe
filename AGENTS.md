@@ -48,6 +48,7 @@ ref are cancelled): unit/lint checks (`npm ci`, `npm run lint`, syntax check,
 | `tests/game.test.js`                    | Unit tests plus DOM integration tests against a hand-rolled mock DOM              |
 | `e2e/*.spec.js`, `playwright.config.js` | Real-browser Playwright E2E, offline, layout and axe accessibility tests          |
 | `e2e/csp-fixture.js`                    | Playwright fixture that applies the `vercel.json` CSP to every HTML document      |
+| `deferred-review-items.md`              | Persistent list of review findings deferred to a later PR                         |
 
 ## How `app.js` works
 
