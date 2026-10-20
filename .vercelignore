@@ -2,6 +2,7 @@ tests/
 e2e/
 .github/
 AGENTS.md
+deferred-review-items.md
 CLAUDE.md
 GEMINI.md
 package.json
