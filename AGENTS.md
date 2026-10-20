@@ -28,7 +28,7 @@ python3 -m http.server 4321 --bind 0.0.0.0   # serve locally & on LAN (port 4321
 
 Serve the app over HTTP rather than opening it as `file://`, because the
 manifest and PWA features need it. CI (`.github/workflows/ci.yml`) runs two jobs
-on Node 22 for pull requests and pushes to `main` (superseded runs on the same
+on Node 22 for pull requests and pushes to `master` (superseded runs on the same
 ref are cancelled): unit/lint checks (`npm ci`, `npm run lint`, syntax check,
 `npm test`) and Playwright E2E/accessibility checks (`npm run test:e2e`).
 
@@ -133,14 +133,14 @@ ref are cancelled): unit/lint checks (`npm ci`, `npm run lint`, syntax check,
 - The site is hosted on **Vercel** as a static site.
 - Production is `https://mike.pullen.dev/tic-tac-toe/`, proxied from this Vercel
   project by the main site (`mtp13/mike.pullen.dev`). The
-  `tic-tac-toe-mike-pullen.vercel.app` URL serves the app from `/`. Only `main`
-  is deployed (`git.deploymentEnabled` in `vercel.json`), so feature branches
-  and PRs get no Vercel preview (and no `Vercel` check on PRs, which is
+  `tic-tac-toe-mike-pullen.vercel.app` URL serves the app from `/`. Only
+  `master` is deployed (`git.deploymentEnabled` in `vercel.json`), so feature
+  branches and PRs get no Vercel preview (and no `Vercel` check on PRs, which is
   expected) because the Hobby plan caps deployments at 100/day. Test on
   localhost instead. The keys are minimatch patterns: keep `"**": false` (a bare
   `*` does not match branch names containing `/`, such as `feat/x`, so they
-  would still deploy) and keep the explicit `"main": true` (Vercel deploys a
-  branch if any matching rule is `true`, so `main` still deploys). This only
+  would still deploy) and keep the explicit `"master": true` (Vercel deploys a
+  branch if any matching rule is `true`, so `master` still deploys). This only
   blocks Git-triggered deployments: CLI `vercel` deploys and deploy hooks still
   count. `tests/vercel.test.js` guards this.
 - All paths must stay relative. Never use root-anchored paths (`/…`) or a
@@ -167,21 +167,21 @@ ref are cancelled): unit/lint checks (`npm ci`, `npm run lint`, syntax check,
 ## Git & GitHub
 
 - Commit locally as often as you like, but push once per unit of work: every
-  push to `main` is a Vercel deployment and every PR push is a CI run. Don't
+  push to `master` is a Vercel deployment and every PR push is a CI run. Don't
   push WIP commits, and batch review fixes into one push.
-- The repo is on GitHub at `mtp13/tic-tac-toe` (remote `origin`), and `main` is
-  the default branch.
-- Before making changes, check the current branch. If you're on `main`, create a
-  feature branch first (`feat/…`, `fix/…`, `chore/…`, `docs/…`). If you're
+- The repo is on GitHub at `mtp13/tic-tac-toe` (remote `origin`), and `master`
+  is the default branch.
+- Before making changes, check the current branch. If you're on `master`, create
+  a feature branch first (`feat/…`, `fix/…`, `chore/…`, `docs/…`). If you're
   already on a feature branch for related work, keep using it. Once a PR is
-  merged, start new work on a fresh branch from an up-to-date `main`, and never
-  push to a merged branch.
+  merged, start new work on a fresh branch from an up-to-date `master`, and
+  never push to a merged branch.
 - When the work is finished, run `npm run format`, then `npm run lint`,
   `npm test` and `npm run test:e2e`. Commit only once all of them pass, then
-  push the branch and open a pull request against `main` with `gh pr create`.
+  push the branch and open a pull request against `master` with `gh pr create`.
   Every commit must be formatted, not just the last one before a PR. Give the PR
   a summary and test notes. You don't need to ask first. If a PR is already open
   for the branch, push to update it.
 - Use the `gh` CLI for PRs, issues and checking CI runs. Each PR runs CI through
   GitHub Actions; check it with `gh pr checks` and fix any failures.
-- Never commit to, push to or force-push `main` directly.
+- Never commit to, push to or force-push `master` directly.

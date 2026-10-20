@@ -52,5 +52,5 @@ and CI runs on GitHub Actions.
 
 ## Contributing
 
-Work on a branch, open a pull request against `main`, and make sure CI passes.
+Work on a branch, open a pull request against `master`, and make sure CI passes.
 Run `npm run format`, `npm run lint` and `npm test` before you push.
