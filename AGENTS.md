@@ -77,6 +77,9 @@ ref are cancelled): unit/lint checks (`npm ci`, `npm run lint`, syntax check,
 
 ## Conventions
 
+- Markdown is wrapped at 80 columns: `.prettierrc` has a `*.md` override
+  (`proseWrap: always`), so `npm run format` rewraps prose and
+  `npm run format:check` flags long lines.
 - Prettier (`.prettierrc` + `.prettierignore`) is the source of truth for
   formatting (2 spaces, semicolons, double quotes). Run `npm run format` before
   committing. `.editorconfig` sets LF line endings and a final newline.
