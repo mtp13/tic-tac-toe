@@ -23,7 +23,7 @@ python3 -m http.server 4321 --bind 0.0.0.0   # serve locally & on LAN (port 4321
 ```
 
 Serve the app over HTTP rather than opening it as `file://`, because the manifest and PWA features need it.
-CI (`.github/workflows/ci.yml`) runs two jobs on Node 22 for pull requests and pushes to `main`: unit/lint checks (`npm ci`, `npm run lint`, syntax check, `npm test`) and Playwright E2E/accessibility checks (`npm run test:e2e`).
+CI (`.github/workflows/ci.yml`) runs two jobs on Node 22 for pull requests and pushes to `main` (superseded runs on the same ref are cancelled): unit/lint checks (`npm ci`, `npm run lint`, syntax check, `npm test`) and Playwright E2E/accessibility checks (`npm run test:e2e`).
 
 ## Layout
 
@@ -72,7 +72,7 @@ CI (`.github/workflows/ci.yml`) runs two jobs on Node 22 for pull requests and p
 ## Deployment
 
 - The site is hosted on **Vercel** as a static site.
-- Production is `https://mike.pullen.dev/tic-tac-toe/`, proxied from this Vercel project by the main site (`mtp13/mike.pullen.dev`). The `tic-tac-toe-mike-pullen.vercel.app` URL serves the app from `/`. Only `main` is deployed (`git.deploymentEnabled` in `vercel.json`), so feature branches and PRs get no Vercel preview (and no `Vercel` check on PRs, which is expected) because the Hobby plan caps deployments at 100/day. Test on localhost instead. The keys are minimatch patterns: keep `"**": false` (a bare `*` does not match branch names containing `/`, such as `feat/x`, so they would still deploy) and keep the explicit `"main": true`. `tests/vercel.test.js` guards this.
+- Production is `https://mike.pullen.dev/tic-tac-toe/`, proxied from this Vercel project by the main site (`mtp13/mike.pullen.dev`). The `tic-tac-toe-mike-pullen.vercel.app` URL serves the app from `/`. Only `main` is deployed (`git.deploymentEnabled` in `vercel.json`), so feature branches and PRs get no Vercel preview (and no `Vercel` check on PRs, which is expected) because the Hobby plan caps deployments at 100/day. Test on localhost instead. The keys are minimatch patterns: keep `"**": false` (a bare `*` does not match branch names containing `/`, such as `feat/x`, so they would still deploy) and keep the explicit `"main": true` (Vercel deploys a branch if any matching rule is `true`, so `main` still deploys). This only blocks Git-triggered deployments: CLI `vercel` deploys and deploy hooks still count. `tests/vercel.test.js` guards this.
 - All paths must stay relative. Never use root-anchored paths (`/…`) or a `<base>` tag.
 - Playwright runs every test both at the root and in a `/tic-tac-toe/` subfolder.
 - Headers and `.vercelignore` can only be checked with `curl` against production after merging, since branches are not deployed.
