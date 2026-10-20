@@ -37,6 +37,7 @@ CI (`.github/workflows/ci.yml`) runs two jobs on Node 22 for pull requests and p
 | `manifest.webmanifest`                  | PWA manifest                                                                      |
 | `favicon.png`, `icon-{180,192,512}.png` | Favicon (128×128), iOS touch icon (180×180 opaque RGB), and PWA/maskable icons    |
 | `vercel.json`, `.vercelignore`          | Security/CSP and cache headers, plus deploy exclusion list                        |
+| `tests/vercel.test.js`                  | Guards the `vercel.json` branch-deployment rule (only the default branch deploys) |
 | `tests/game.test.js`                    | Unit tests plus DOM integration tests against a hand-rolled mock DOM              |
 | `e2e/*.spec.js`, `playwright.config.js` | Real-browser Playwright E2E, offline, layout and axe accessibility tests          |
 | `e2e/csp-fixture.js`                    | Playwright fixture that applies the `vercel.json` CSP to every HTML document      |
@@ -71,10 +72,10 @@ CI (`.github/workflows/ci.yml`) runs two jobs on Node 22 for pull requests and p
 ## Deployment
 
 - The site is hosted on **Vercel** as a static site.
-- Production is `https://mike.pullen.dev/tic-tac-toe/`, proxied from this Vercel project by the main site (`mtp13/mike.pullen.dev`). Previews and `tic-tac-toe-mike-pullen.vercel.app` serve the app from `/`.
+- Production is `https://mike.pullen.dev/tic-tac-toe/`, proxied from this Vercel project by the main site (`mtp13/mike.pullen.dev`). The `tic-tac-toe-mike-pullen.vercel.app` URL serves the app from `/`. Only `main` is deployed (`git.deploymentEnabled` in `vercel.json`), so feature branches and PRs get no Vercel preview (and no `Vercel` check on PRs, which is expected) because the Hobby plan caps deployments at 100/day. Test on localhost instead. The keys are minimatch patterns: keep `"**": false` (a bare `*` does not match branch names containing `/`, such as `feat/x`, so they would still deploy) and keep the explicit `"main": true`. `tests/vercel.test.js` guards this.
 - All paths must stay relative. Never use root-anchored paths (`/…`) or a `<base>` tag.
 - Playwright runs every test both at the root and in a `/tic-tac-toe/` subfolder.
-- Vercel previews are behind login protection, so headers and `.vercelignore` can only be checked with `curl` against production after merging.
+- Headers and `.vercelignore` can only be checked with `curl` against production after merging, since branches are not deployed.
 - `.vercelignore` excludes `package.json`, `package-lock.json`, tests, docs and tooling configs so Vercel deploys only the app's runtime files and skips `npm install`. `package.json` also has no `build` script, and no build script should be added.
 - If you add a new tooling or config file, add it to `.vercelignore` so it isn't served. Never commit secrets.
 - Paths in `index.html`, `manifest.webmanifest` and `sw.js` are relative (`./`, `favicon.png`, etc.) rather than root-anchored with `/` so the app works both at a domain root and in a subfolder. **If you add or rename an asset, update `index.html`, `manifest.webmanifest` and `PRECACHE_URLS` in `sw.js`.**
@@ -82,6 +83,7 @@ CI (`.github/workflows/ci.yml`) runs two jobs on Node 22 for pull requests and p
 
 ## Git & GitHub
 
+- Commit locally as often as you like, but push once per unit of work: every push to `main` is a Vercel deployment and every PR push is a CI run. Don't push WIP commits, and batch review fixes into one push.
 - The repo is on GitHub at `mtp13/tic-tac-toe` (remote `origin`), and `main` is the default branch.
 - Before making changes, check the current branch. If you're on `main`, create a feature
   branch first (`feat/…`, `fix/…`, `chore/…`, `docs/…`). If you're already on a feature
