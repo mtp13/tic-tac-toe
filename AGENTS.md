@@ -20,7 +20,7 @@ mode, and it can be installed as a PWA.
 npm test                                     # node --test tests/*.test.js (Node built-in test runner)
 npm run test:e2e                             # playwright test (Desktop Chromium + Mobile WebKit E2E & axe a11y)
 npm run format                               # prettier --write .
-npm run lint                                 # prettier --check . && html-validate index.html
+npm run lint                                 # npm run format:check && npm run lint:html
 npm run lint:html                            # html-validate index.html
 node --check app.js                          # syntax check (CI runs this too)
 python3 -m http.server 4321 --bind 0.0.0.0   # serve locally & on LAN (port 4321 is open in UFW for mobile testing)
@@ -143,6 +143,11 @@ ref are cancelled): unit/lint checks (`npm ci`, `npm run lint`, syntax check,
   branch if any matching rule is `true`, so `master` still deploys). This only
   blocks Git-triggered deployments: CLI `vercel` deploys and deploy hooks still
   count. `tests/vercel.test.js` guards this.
+- **To opt a branch into a Vercel preview,** add it to that branch's own
+  `vercel.json`, because the rule is read per branch:
+  `{"master": true, "feat/x": true, "**": false}`. Pushing the branch then
+  deploys it and the preview URL appears on the PR. Every deployment counts
+  against the 100/day budget, so drop the entry when the branch is finished.
 - All paths must stay relative. Never use root-anchored paths (`/…`) or a
   `<base>` tag.
 - Playwright runs every test both at the root and in a `/tic-tac-toe/`
